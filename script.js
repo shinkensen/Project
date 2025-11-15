@@ -1,10 +1,8 @@
-// Application State
 const appState = {
     uploadedFiles: [],
     conversationHistory: [],
-    notesContent: '' // This would store extracted text from uploaded files
+    notesContent: ''
 };
-
 // DOM Elements
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
@@ -375,20 +373,13 @@ function addMessage(content, sender) {
     const messageHeader = document.createElement('div');
     messageHeader.className = `message-header ${sender}`;
     messageHeader.textContent = sender === 'user' ? '👤 You' : '🤖 AI Assistant';
-    
     const messageContent = document.createElement('div');
     messageContent.className = 'message-content';
     messageContent.textContent = content;
-    
     messageDiv.appendChild(messageHeader);
     messageDiv.appendChild(messageContent);
-    
     conversation.appendChild(messageDiv);
-    
-    // Scroll to bottom
     conversation.scrollTop = conversation.scrollHeight;
-    
-    // Store in history
     appState.conversationHistory.push({ content, sender, timestamp: Date.now() });
 }
 
@@ -402,12 +393,6 @@ function showTypingIndicator() {
 }
 
 function generateAIResponse(question) {
-    // This is a simulated AI response generator
-    // In production, you would:
-    // 1. Send the question + uploaded notes content to your backend
-    // 2. Backend would use the notes to train/fine-tune or provide context to an AI model
-    // 3. Return the AI-generated response
-    
     const responses = [
         `Based on your uploaded notes, here's what I found: ${question.toLowerCase().includes('what') ? 'The key concept relates to the material you provided.' : 'Let me explain this based on your notes.'}
 
@@ -442,12 +427,6 @@ function getRandomInsight() {
     ];
     return insights[Math.floor(Math.random() * insights.length)];
 }
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-// Export conversation (bonus feature)
 function exportConversation() {
     const text = appState.conversationHistory
         .map(msg => `[${msg.sender.toUpperCase()}]: ${msg.content}`)
@@ -461,6 +440,4 @@ function exportConversation() {
     a.click();
     URL.revokeObjectURL(url);
 }
-
-// Console helper for debugging
 console.log('StudyAI initialized! Upload notes and start asking questions.');
