@@ -1,9 +1,9 @@
-# StudyAI - Smart Notes & AI Q&A Platform
+# IntelliNotes - Smart Notes & AI Q&A Platform
 
 Student Hackpad Hackathon 2025 submission
 
 ## Overview
-StudyAI is a web application that allows students to upload their study notes and ask questions that get answered by an AI model trained on the uploaded content.
+IntelliNotes is a web application that allows students to upload their study notes and ask questions that get answered by an AI model trained on the uploaded content.
 
 ## Features
 - 📤 **File Upload**: Drag & drop or click to upload notes (PDF, TXT, DOCX, MD)
