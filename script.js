@@ -365,7 +365,6 @@ async function handleAskQuestion() {
         addMessage(aiResponse, 'ai');
     }, 1500 + Math.random() * 1000);
 }
-
 function addMessage(content, sender) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${sender}`;
