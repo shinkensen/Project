@@ -1,2 +1,2 @@
 # Project
-Student Hackpad HAckathon submission
+Student Hackpad Hackathon submission
