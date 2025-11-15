@@ -1,0 +1,25 @@
+{
+  "name": "project",
+  "version": "1.0.0",
+  "description": "//",
+  "homepage": "https://github.com/shinkensen/Project#readme",
+  "bugs": {
+    "url": "https://github.com/shinkensen/Project/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shinkensen/Project.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "backend.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "supabase": "^2.58.5"
+  }
+}
