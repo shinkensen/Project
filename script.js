@@ -440,3 +440,17 @@ function exportConversation() {
     URL.revokeObjectURL(url);
 }
 console.log('StudyAI initialized! Upload notes and start asking questions.');
+
+async function loadNotes() {
+  const response = await fetch(url + "/notes",{
+    "method": "GET",
+    headers:{
+        "Content-Type": "application/json"
+    }            
+  });
+  const result = await response.json();
+
+  console.log(result);
+}
+
+loadNotes();
