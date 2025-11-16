@@ -42,14 +42,14 @@ app.post("/upload-notes",upload.single("file"), async(req,res)=>{
     }
 })
 app.post("/sign-up",async(req,res) =>{
-    uuid = req.userId;
+    let email = req.body.email;
+    let pass = req.body.password;
     try{
-        const{data, error} = await supabase.auth.signInWithOAuth({
-        });
+        const{data, error} = await supabase.auth.signUp({email: email, password: pass});
         if(error){
             return res.status(500).json({error: error.message});
         }
-        res.status(200).json({url: data.url});
+        res.status(200).json({message: "valid"});
     }
     catch(err){
         res.status(500).json({error: error.message});
