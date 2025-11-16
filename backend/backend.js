@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import express from "express";
 import cors from "cors";
 import multer from 'multer'; 
-let url = "https://www.";
+let url = "https://project-iqv0.onrender.com";
 const supabase = createClient(
     "https://vcrmkjjzeiwirwszqxew.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjcm1ramp6ZWl3aXJ3c3pxeGV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMjA0NzIsImV4cCI6MjA3ODc5NjQ3Mn0.7n9xIL72BRGEtqCkGZ0C-LGsxrs4MciLh1En2lv-rP4"

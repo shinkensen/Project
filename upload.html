@@ -1,37 +1,79 @@
-<html>
-    <main>
-            <!-- Upload Tab -->
-            <div class="tab-content active" id="upload-tab">
-                <section class="upload-section">
-                    <h2>Upload Your Notes</h2>
-                    <div class="subject-selector">
-                        <label for="subjectSelect">Select Subject:</label>
-                        <select id="subjectSelect">
-                            <option value="mathematics">📐 Mathematics</option>
-                            <option value="science">🔬 Science</option>
-                            <option value="history">📜 History</option>
-                            <option value="literature">📖 Literature</option>
-                            <option value="computer-science">💻 Computer Science</option>
-                            <option value="languages">🌍 Languages</option>
-                            <option value="arts">🎨 Arts</option>
-                            <option value="other">📌 Other</option>
-                        </select>
-                    </div>
-                    <div class="upload-area" id="uploadArea">
-                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Notes - IntelliNotes</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="nav-tabs">
+        <a href="index.html" class="tab">Home</a>
+        <a href="chatbot.html" class="tab">Chatbot</a>
+        <a href="upload.html" class="tab active">Upload</a>
+        <a href="gallery.html" class="tab">Gallery</a>
+    </nav>
+
+    <div class="container">
+        <header>
+            <h1>📤 Upload Your Notes</h1>
+            <p class="subtitle">Share your study materials with the community</p>
+        </header>
+
+        <main>
+            <section class="upload-section">
+                <div class="subject-selector">
+                    <label for="subjectSelect">Select Subject:</label>
+                    <select id="subjectSelect">
+                        <option value="mathematics">📐 Mathematics</option>
+                        <option value="science">🔬 Science</option>
+                        <option value="history">📜 History</option>
+                        <option value="literature">📖 Literature</option>
+                        <option value="computer-science">💻 Computer Science</option>
+                        <option value="languages">🌍 Languages</option>
+                        <option value="arts">🎨 Arts</option>
+                        <option value="other">📌 Other</option>
+                    </select>
+                </div>
+
+                <div class="upload-area" id="uploadArea">
+                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                    </svg>
+                    <p class="upload-text">Drag & drop your notes here</p>
+                    <p class="upload-subtext">or click to browse</p>
+                    <p class="file-types">Supported: PDF, TXT, DOCX, MD</p>
+                    <input type="file" id="fileInput" accept=".pdf,.txt,.docx,.doc,.md" multiple hidden>
+                </div>
+                
+                <div class="uploaded-files" id="uploadedFiles" style="display: none;">
+                    <h3>Ready to Upload (<span id="fileCount">0</span>)</h3>
+                    <div class="files-list" id="filesList"></div>
+                    <button id="uploadButton" class="btn btn-primary" style="margin-top: 1.5rem; width: 100%;">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0L8 8m4 4V3"/>
                         </svg>
-                        <p class="upload-text">Drag & drop your notes here</p>
-                        <p class="upload-subtext">or click to browse</p>
-                        <p class="file-types">Supported: PDF, TXT, DOCX, MD</p>
-                        <input type="file" id="fileInput" accept=".pdf,.txt,.docx,.doc,.md" multiple hidden>
-                    </div>
-                    
-                    <!-- Uploaded Files List -->
-                    <div class="uploaded-files" id="uploadedFiles">
-                        <h3>Uploaded Notes (<span id="fileCount">0</span>)</h3>
-                        <div class="files-list" id="filesList"></div>
-                    </div>
-                </section>
-            </div>
+                        Upload All Files
+                    </button>
+                </div>
+
+                <div class="upload-success" id="uploadSuccess" style="display: none;">
+                    <svg class="success-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    <h3>Upload Successful!</h3>
+                    <p>Your notes have been uploaded to the gallery</p>
+                    <a href="gallery.html" class="btn btn-primary" style="margin-top: 1rem;">View Gallery</a>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Built for Student Hackpad Hackathon 2025</p>
+        </footer>
+    </div>
+
+    <script src="upload.js"></script>
+</body>
 </html>

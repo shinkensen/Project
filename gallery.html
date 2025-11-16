@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes Gallery - IntelliNotes</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="nav-tabs">
+        <a href="index.html" class="tab">Home</a>
+        <a href="chatbot.html" class="tab">Chatbot</a>
+        <a href="upload.html" class="tab">Upload</a>
+        <a href="gallery.html" class="tab active">Gallery</a>
+    </nav>
+
+    <div class="container">
+        <header>
+            <h1>📚 Notes Gallery</h1>
+            <p class="subtitle">Browse and search through all uploaded study materials</p>
+        </header>
+
+        <main>
+            <section class="gallery-section">
+                <!-- Search and Filter Controls -->
+                <div class="gallery-controls">
+                    <div class="search-container">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            class="search-input" 
+                            placeholder="Search notes by name..."
+                        >
+                        <button class="clear-search" id="clearSearch" style="display: none;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="sort-container">
+                        <label for="sortSelect">Sort by:</label>
+                        <select id="sortSelect" class="sort-select">
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                            <option value="name">Name (A-Z)</option>
+                            <option value="subject">Subject</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Subject Filters -->
+                <div class="subject-filters" id="subjectFilters">
+                    <button class="filter-btn active" data-subject="all">All</button>
+                    <button class="filter-btn mathematics" data-subject="mathematics">📐 Mathematics</button>
+                    <button class="filter-btn science" data-subject="science">🔬 Science</button>
+                    <button class="filter-btn history" data-subject="history">📜 History</button>
+                    <button class="filter-btn literature" data-subject="literature">📖 Literature</button>
+                    <button class="filter-btn computer-science" data-subject="computer-science">💻 Computer Science</button>
+                    <button class="filter-btn languages" data-subject="languages">🌍 Languages</button>
+                    <button class="filter-btn arts" data-subject="arts">🎨 Arts</button>
+                    <button class="filter-btn other" data-subject="other">📌 Other</button>
+                </div>
+
+                <!-- Results Counter -->
+                <div class="results-info">
+                    <p>Showing <span id="resultCount">0</span> notes</p>
+                </div>
+
+                <!-- Gallery Grid -->
+                <div class="gallery-grid" id="galleryGrid">
+                    <div class="gallery-empty">
+                        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        <p>No notes found</p>
+                        <a href="upload.html" class="btn btn-primary" style="margin-top: 1rem;">Upload Notes</a>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Built for Student Hackpad Hackathon 2025</p>
+        </footer>
+    </div>
+
+    <script src="gallery.js"></script>
+</body>
+</html>
