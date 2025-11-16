@@ -7,12 +7,18 @@ import OpenAI from 'openai';
 // ============================================
 // 🔑 OPENAI API KEY (from Render environment variable)
 // ============================================
-const OPENAI_API_KEY = process.env["OPENAI-KEY"] || "";
+const OPENAI_API_KEY = process.env["OPENAI-KEY"] || process.env.OPENAI_KEY || "";
 // Set OPENAI-KEY in your Render dashboard environment variables
 // ============================================
 
 // Initialize OpenAI client
 const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
+
+if (OPENAI_API_KEY) {
+    console.log("✅ OpenAI key detected. AI responses enabled.");
+} else {
+    console.warn("⚠️ OPENAI-KEY / OPENAI_KEY not set. Chatbot will use fallback responses only.");
+}
 
 let url = "https://project-iqv0.onrender.com";
 const supabase = createClient(
