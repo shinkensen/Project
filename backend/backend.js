@@ -211,27 +211,41 @@ app.delete("/delete-note", async (req, res) => {
 
 app.post("/chat", async (req, res) => {
     try {
+        console.log('Chat request received:', req.body);
         const { message, userId, conversationHistory } = req.body;
         
         if (!message) {
+            console.log('Error: No message provided');
             return res.status(400).json({ error: "Message is required" });
         }
+
+        console.log(`Processing chat for user: ${userId}, message: ${message}`);
 
         // Fetch user's notes for context
         const allFiles = [];
         const subjects = ['mathematics', 'science', 'history', 'literature', 'computer-science', 'languages', 'arts', 'other'];
         
         for (const subject of subjects) {
-            const { data: folders } = await supabase.storage
+            const { data: folders, error: folderError } = await supabase.storage
                 .from("notes")
                 .list(subject, { limit: 50 });
+
+            if (folderError) {
+                console.error(`Error listing folders for ${subject}:`, folderError);
+                continue;
+            }
 
             if (folders) {
                 for (const folder of folders) {
                     if (folder.name === userId || userId === 'anonymous') {
-                        const { data: files } = await supabase.storage
+                        const { data: files, error: fileError } = await supabase.storage
                             .from("notes")
                             .list(`${subject}/${folder.name}`, { limit: 50 });
+
+                        if (fileError) {
+                            console.error(`Error listing files in ${subject}/${folder.name}:`, fileError);
+                            continue;
+                        }
 
                         if (files) {
                             files.forEach(file => {
@@ -249,8 +263,12 @@ app.post("/chat", async (req, res) => {
             }
         }
 
+        console.log(`Found ${allFiles.length} notes for user ${userId}`);
+
         // Generate contextual response
         const response = generateResponse(message, allFiles, conversationHistory);
+        
+        console.log('Sending response:', response.substring(0, 100) + '...');
         
         res.status(200).json({ 
             response: response,
@@ -258,6 +276,7 @@ app.post("/chat", async (req, res) => {
             subjects: [...new Set(allFiles.map(f => f.subject))]
         });
     } catch (err) {
+        console.error('Chat endpoint error:', err);
         res.status(500).json({ error: err.message });
     }
 });

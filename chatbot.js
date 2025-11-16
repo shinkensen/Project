@@ -228,6 +228,8 @@ async function sendMessage() {
         // Get user ID from localStorage
         const userId = localStorage.getItem('userId') || 'anonymous';
         
+        console.log('Sending message to backend:', { message, userId });
+        
         // Send message to backend API
         const response = await fetch('https://project-iqv0.onrender.com/chat', {
             method: 'POST',
@@ -239,14 +241,20 @@ async function sendMessage() {
             })
         });
 
+        console.log('Response status:', response.status);
+
         if (!response.ok) {
-            throw new Error('Failed to get response from AI');
+            const errorData = await response.json().catch(() => ({}));
+            console.error('API error:', errorData);
+            throw new Error(errorData.error || 'Failed to get response from AI');
         }
 
         const data = await response.json();
+        console.log('Received response:', data);
         
         hideTypingIndicator();
         addMessage(data.response, 'ai');
+        sendButton.disabled = false;
         
         // Optional: Show notes count if available
         if (data.notesAvailable !== undefined && data.notesAvailable === 0) {
@@ -257,7 +265,7 @@ async function sendMessage() {
     } catch (error) {
         console.error('Chat error:', error);
         hideTypingIndicator();
-        addMessage('Sorry, I encountered an error. Please try again. If the problem persists, the backend server may be starting up (this can take a minute on the first request).', 'ai');
+        addMessage(`Sorry, I encountered an error: ${error.message}. Please try again. If the problem persists, the backend server may be starting up (this can take a minute on the first request).`, 'ai');
         sendButton.disabled = false;
     }
 }
