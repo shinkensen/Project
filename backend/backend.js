@@ -4,10 +4,10 @@ import cors from "cors";
 import multer from 'multer'; 
 
 // ============================================
-// 🔑 OPENAI API KEY (from environment variable)
+// 🔑 OPENAI API KEY (from Render environment variable)
 // ============================================
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
-// Set OPENAI_API_KEY in your environment configuration (e.g., .env or Render dashboard)
+const OPENAI_API_KEY = process.env["OPENAI-KEY"] || "";
+// Set OPENAI-KEY in your Render dashboard environment variables
 // ============================================
 
 let url = "https://project-iqv0.onrender.com";
