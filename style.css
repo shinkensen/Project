@@ -1490,6 +1490,158 @@ footer {
     font-weight: 600;
 }
 
+/* Notes Panel */
+.notes-panel {
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    max-height: 300px;
+    overflow-y: auto;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        max-height: 0;
+        opacity: 0;
+    }
+    to {
+        max-height: 300px;
+        opacity: 1;
+    }
+}
+
+.notes-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.notes-panel-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text);
+}
+
+.close-panel {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.close-panel:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+.notes-panel-content {
+    padding: 1rem 1.5rem;
+}
+
+.loading-notes, .empty-notes {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 2rem;
+}
+
+.subject-group {
+    margin-bottom: 1.5rem;
+}
+
+.subject-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.notes-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.note-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    background: var(--background);
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+}
+
+.note-item:hover {
+    border-color: var(--primary);
+    transform: translateX(4px);
+}
+
+.note-name {
+    flex: 1;
+    font-size: 0.9rem;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mini-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-muted);
+}
+
+.mini-btn:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+/* Logout Button */
+.logout-btn {
+    margin-left: auto !important;
+    background: transparent !important;
+    color: var(--danger) !important;
+    border: 2px solid var(--danger) !important;
+}
+
+.logout-btn:hover {
+    background: var(--danger) !important;
+    color: white !important;
+}
+
+/* Spinning animation for loading states */
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 /* Chatbot Access Section */
 
 

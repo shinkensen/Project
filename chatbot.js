@@ -6,6 +6,152 @@ const clearChatBtn = document.getElementById('clearChat');
 const attachBtn = document.getElementById('attachBtn');
 
 let conversationHistory = [];
+let userNotes = [];
+
+// Load user's notes on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const response = await fetch('https://project-iqv0.onrender.com/notes');
+        if (response.ok) {
+            const data = await response.json();
+            const userId = localStorage.getItem('userId');
+            // Filter notes for current user
+            userNotes = data.files.filter(file => file.path.includes(userId));
+            
+            // Update notes count in header
+            updateNotesCount();
+            
+            // Update welcome message if user has notes
+            if (userNotes.length > 0) {
+                updateWelcomeMessage();
+            }
+            
+            // Populate notes panel
+            populateNotesPanel();
+        }
+    } catch (error) {
+        console.log('Could not load notes:', error);
+        document.getElementById('notesCount').textContent = 'No notes loaded';
+    }
+});
+
+// Toggle notes panel
+const toggleNotesBtn = document.getElementById('toggleNotes');
+if (toggleNotesBtn) {
+    toggleNotesBtn.addEventListener('click', toggleNotesPanel);
+}
+
+function toggleNotesPanel() {
+    const panel = document.getElementById('notesPanel');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+function updateNotesCount() {
+    const notesCountEl = document.getElementById('notesCount');
+    if (notesCountEl) {
+        if (userNotes.length === 0) {
+            notesCountEl.textContent = 'No notes uploaded';
+        } else {
+            const subjects = [...new Set(userNotes.map(n => n.subject))];
+            notesCountEl.textContent = `${userNotes.length} notes in ${subjects.length} subject(s)`;
+        }
+    }
+}
+
+function populateNotesPanel() {
+    const panelContent = document.getElementById('notesPanelContent');
+    
+    if (!panelContent) return;
+    
+    if (userNotes.length === 0) {
+        panelContent.innerHTML = `
+            <div class="empty-notes">
+                <p>📝 No notes uploaded yet</p>
+                <a href="upload.html" class="btn btn-primary" style="margin-top: 1rem; display: inline-block;">Upload Notes</a>
+            </div>
+        `;
+        return;
+    }
+    
+    // Group notes by subject
+    const notesBySubject = {};
+    userNotes.forEach(note => {
+        if (!notesBySubject[note.subject]) {
+            notesBySubject[note.subject] = [];
+        }
+        notesBySubject[note.subject].push(note);
+    });
+    
+    let html = '';
+    for (const subject in notesBySubject) {
+        const notes = notesBySubject[subject];
+        html += `
+            <div class="subject-group">
+                <h4 class="subject-title">${formatSubjectName(subject)}</h4>
+                <ul class="notes-list">
+                    ${notes.map(note => `
+                        <li class="note-item">
+                            <span class="note-name" title="${note.name}">${truncate(note.name, 30)}</span>
+                            <button class="mini-btn" onclick="sendSuggestion('Tell me about ${note.name}')" title="Ask about this note">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                </svg>
+                            </button>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    panelContent.innerHTML = html;
+}
+
+function truncate(str, maxLength) {
+    if (str.length <= maxLength) return str;
+    return str.substring(0, maxLength - 3) + '...';
+}
+
+function updateWelcomeMessage() {
+    const welcomeText = document.getElementById('welcomeText');
+    const suggestionChips = document.getElementById('suggestionChips');
+    
+    if (welcomeText && userNotes.length > 0) {
+        const subjects = [...new Set(userNotes.map(n => n.subject))];
+        const subjectNames = subjects.map(formatSubjectName).join(', ');
+        welcomeText.textContent = `You have ${userNotes.length} notes uploaded covering ${subjectNames}. Ask me anything!`;
+        
+        // Add subject-specific suggestions
+        if (suggestionChips) {
+            suggestionChips.innerHTML = `
+                <button class="chip" onclick="sendSuggestion('What notes do I have?')">📚 Show my notes</button>
+                <button class="chip" onclick="sendSuggestion('Summarize my ${subjects[0]} notes')">📝 Summarize ${formatSubjectName(subjects[0])}</button>
+                <button class="chip" onclick="sendSuggestion('Create ${subjects[0]} practice questions')">❓ Quiz me</button>
+                <button class="chip" onclick="sendSuggestion('Explain a ${subjects[0]} concept')">💡 Explain concepts</button>
+            `;
+        }
+    }
+}
+
+function formatSubjectName(subject) {
+    const names = {
+        'mathematics': 'Mathematics',
+        'science': 'Science',
+        'history': 'History',
+        'literature': 'Literature',
+        'computer-science': 'Computer Science',
+        'languages': 'Languages',
+        'arts': 'Arts',
+        'other': 'General'
+    };
+    return names[subject] || subject;
+}
 
 // Auto-resize textarea
 chatInput.addEventListener('input', function() {
@@ -57,7 +203,7 @@ function sendSuggestion(text) {
     sendButton.disabled = false;
 }
 
-function sendMessage() {
+async function sendMessage() {
     const message = chatInput.value.trim();
     if (!message) return;
 
@@ -78,12 +224,42 @@ function sendMessage() {
     // Show typing indicator
     showTypingIndicator();
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+        // Get user ID from localStorage
+        const userId = localStorage.getItem('userId') || 'anonymous';
+        
+        // Send message to backend API
+        const response = await fetch('https://project-iqv0.onrender.com/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: message,
+                userId: userId,
+                conversationHistory: conversationHistory.slice(-10) // Last 10 messages for context
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to get response from AI');
+        }
+
+        const data = await response.json();
+        
         hideTypingIndicator();
-        const response = generateAIResponse(message);
-        addMessage(response, 'ai');
-    }, 1500);
+        addMessage(data.response, 'ai');
+        
+        // Optional: Show notes count if available
+        if (data.notesAvailable !== undefined && data.notesAvailable === 0) {
+            setTimeout(() => {
+                addMessage('💡 Tip: Upload your study materials using the Upload page to get personalized help!', 'ai');
+            }, 500);
+        }
+    } catch (error) {
+        console.error('Chat error:', error);
+        hideTypingIndicator();
+        addMessage('Sorry, I encountered an error. Please try again. If the problem persists, the backend server may be starting up (this can take a minute on the first request).', 'ai');
+        sendButton.disabled = false;
+    }
 }
 
 function addMessage(text, type) {
@@ -140,45 +316,6 @@ function hideTypingIndicator() {
     if (indicator) {
         indicator.remove();
     }
-}
-
-function generateAIResponse(userMessage) {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    // Check for uploaded notes
-    const uploadedNotes = JSON.parse(localStorage.getItem('uploadedNotes') || '[]');
-    
-    if (uploadedNotes.length === 0 && (lowerMessage.includes('notes') || lowerMessage.includes('upload'))) {
-        return "I notice you haven't uploaded any notes yet. Please upload your study materials first so I can help you with specific content from your notes!";
-    }
-    
-    // Subject-specific responses
-    if (lowerMessage.includes('math') || lowerMessage.includes('calculus') || lowerMessage.includes('algebra')) {
-        return "I'd be happy to help with math! Based on your notes, I can explain concepts, solve problems step-by-step, or create practice questions. What specific topic would you like to explore?";
-    }
-    
-    if (lowerMessage.includes('science') || lowerMessage.includes('chemistry') || lowerMessage.includes('physics')) {
-        return "Science questions are my specialty! I can help explain scientific concepts, describe experiments, or clarify complex theories from your notes. What would you like to know?";
-    }
-    
-    if (lowerMessage.includes('explain') || lowerMessage.includes('what is')) {
-        return "I can explain concepts from your uploaded notes. Based on what I see, I'll break down complex ideas into simpler terms with examples. Could you specify which topic or concept you'd like me to explain?";
-    }
-    
-    if (lowerMessage.includes('summary') || lowerMessage.includes('summarize')) {
-        return "I can create summaries of your notes! A good summary includes key points, main concepts, and important details. Which subject or specific notes would you like me to summarize?";
-    }
-    
-    if (lowerMessage.includes('question') || lowerMessage.includes('practice') || lowerMessage.includes('quiz')) {
-        return "I can generate practice questions based on your study materials! These will help test your understanding. Would you like multiple choice, short answer, or essay-style questions?";
-    }
-    
-    if (lowerMessage.includes('study') || lowerMessage.includes('help') || lowerMessage.includes('learn')) {
-        return "I'm here to help you study effectively! I can:\n\n• Explain difficult concepts\n• Create study guides and summaries\n• Generate practice questions\n• Provide mnemonics and memory aids\n• Break down complex topics\n\nWhat would be most helpful for you right now?";
-    }
-    
-    // Default helpful response
-    return "I'm your AI study assistant! I can help you understand your notes better, create summaries, generate practice questions, and explain concepts. What would you like to work on today?";
 }
 
 function escapeHtml(text) {

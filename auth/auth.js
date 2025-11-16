@@ -41,8 +41,9 @@ document.addEventListener('DOMContentLoaded', function() {
             fullNameInput.setAttribute('required', 'true');
         }
 
-        // Re-attach event listener to the new link
-        document.getElementById('switchAuthLink').addEventListener('click', function(e) {
+        // Re-attach event listener to the new link (FIXED: use event delegation instead)
+        const newLink = document.getElementById('switchAuthLink');
+        newLink.addEventListener('click', function(e) {
             e.preventDefault();
             toggleAuthMode();
         });
@@ -58,7 +59,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isLoginMode) {
             // Login logic
             console.log('Logging in:', { email, password });
-            // Add your login API call here
             loginUser(email, password);
         } else {
             // Signup logic
@@ -71,69 +71,73 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             console.log('Signing up:', { email, password, fullName });
-            // Add your signup API call here
             registerUser(email, password, fullName);
         }
     });
 
-    // Mock functions for authentication - replace with actual API calls
-    function loginUser(email, password) {
-        // Simulate API call
-        console.log('Making login request...');
-        fetch("")
-        // Example fetch:
-        /*
-        fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.href = '/dashboard.html';
-            } else {
-                alert('Login failed: ' + data.message);
+    // Login user
+    async function loginUser(email, password) {
+        try {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Signing in...';
+            
+            const res = await fetch('https://project-iqv0.onrender.com/loginEmail', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok) {
+                alert("Login failed: " + (data.error || 'Invalid credentials'));
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign In';
+                return;
             }
-        });
-        */
+            
+            // Store user session
+            localStorage.setItem('userId', data.userId);
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('isLoggedIn', 'true');
+            
+            // Redirect to chatbot page
+            window.location.href = '../chatbot.html';
+        } catch (error) {
+            alert('Network error: ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Sign In';
+        }
     }
 
-    //signUp user
-     async function registerUser(email, password, fullName) {
-        console.log('Making registration request...');
-        const res = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json'},
-            body: JSON.stringify({email,password,fullName})
-        })
-        if (!res.ok){
-            const error = await res.text();
-            alert("Server Error: " + error);
-        }
-        const data = res.json();
-        if(data.success){
-            toggleAuthMode();
-        }
-        else{
-            alert("Registration failed: " + data.message);
-        }
-        // Example fetch:
-        /*
-        fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, fullName })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Registration successful! Please log in.');
-                toggleAuthMode(); // Switch back to login
-            } else {
-                alert('Registration failed: ' + data.message);
+    // SignUp user
+    async function registerUser(email, password, fullName) {
+        try {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating account...';
+            
+            const res = await fetch('https://project-iqv0.onrender.com/sign-up', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json'},
+                body: JSON.stringify({ email, password, fullName })
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok) {
+                alert("Registration failed: " + (data.error || 'Unable to create account'));
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign Up';
+                return;
             }
-        });
-        */
+            
+            alert('Registration successful! Please check your email to verify your account, then log in.');
+            toggleAuthMode();
+            submitBtn.disabled = false;
+        } catch (error) {
+            alert('Network error: ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Sign Up';
+        }
     }
 });

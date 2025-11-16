@@ -137,34 +137,48 @@ uploadButton.addEventListener('click', async () => {
         Uploading...
     `;
 
-    // Get existing files from localStorage
-    const existingFiles = JSON.parse(localStorage.getItem('uploadedNotes') || '[]');
-    
-    // Add new files
     const subject = subjectSelect.value;
-    const newFiles = selectedFiles.map(file => ({
-        name: file.name,
-        size: file.size,
-        subject: subject,
-        uploadDate: new Date().toISOString(),
-        type: file.name.split('.').pop().toLowerCase()
-    }));
+    let uploadedCount = 0;
 
-    // Save to localStorage
-    localStorage.setItem('uploadedNotes', JSON.stringify([...existingFiles, ...newFiles]));
+    try {
+        // Upload each file to the backend
+        for (const file of selectedFiles) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('subject', subject);
 
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+            const response = await fetch('https://project-iqv0.onrender.com/upload-notes', {
+                method: 'POST',
+                body: formData
+            });
 
-    // Show success message
-    uploadArea.style.display = 'none';
-    uploadedFiles.style.display = 'none';
-    uploadSuccess.style.display = 'block';
-    document.querySelector('.subject-selector').style.display = 'none';
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Upload failed');
+            }
 
-    // Reset
-    selectedFiles = [];
-    fileInput.value = '';
+            uploadedCount++;
+        }
+
+        // Show success message
+        uploadArea.style.display = 'none';
+        uploadedFiles.style.display = 'none';
+        uploadSuccess.style.display = 'block';
+        document.querySelector('.subject-selector').style.display = 'none';
+
+        // Reset
+        selectedFiles = [];
+        fileInput.value = '';
+    } catch (error) {
+        alert('Upload error: ' + error.message);
+        uploadButton.disabled = false;
+        uploadButton.innerHTML = `
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0L8 8m4 4V3"/>
+            </svg>
+            Upload All Files
+        `;
+    }
 });
 
 // Add spinning animation CSS

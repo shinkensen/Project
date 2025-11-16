@@ -38,11 +38,41 @@ function setupEventListeners() {
     });
 }
 
-function loadNotes() {
-    // Load from localStorage
-    allNotes = JSON.parse(localStorage.getItem('uploadedNotes') || '[]');
-    filteredNotes = [...allNotes];
-    renderNotes();
+async function loadNotes() {
+    try {
+        // Show loading state
+        galleryGrid.innerHTML = `
+            <div class="gallery-empty">
+                <svg class="empty-icon spinning" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10"></circle>
+                </svg>
+                <p>Loading notes...</p>
+            </div>
+        `;
+        
+        // Fetch from backend API
+        const response = await fetch('https://project-iqv0.onrender.com/notes');
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch notes');
+        }
+        
+        const data = await response.json();
+        allNotes = data.files || [];
+        filteredNotes = [...allNotes];
+        renderNotes();
+    } catch (error) {
+        console.error('Error loading notes:', error);
+        galleryGrid.innerHTML = `
+            <div class="gallery-empty">
+                <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <p>Failed to load notes. Please try again later.</p>
+                <button class="btn btn-primary" onclick="loadNotes()" style="margin-top: 1rem;">Retry</button>
+            </div>
+        `;
+    }
 }
 
 function handleSearch() {
@@ -199,35 +229,46 @@ function createNoteCard(note, index) {
 
 function viewNote(index) {
     const note = filteredNotes[index];
-    alert(`Viewing: ${note.name}\n\nIn a full implementation, this would open the PDF viewer or document reader.`);
+    // Open the file in a new tab
+    window.open(note.url, '_blank');
 }
 
 function downloadNote(index) {
     const note = filteredNotes[index];
-    alert(`Downloading: ${note.name}\n\nIn a full implementation, this would trigger a file download.`);
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = note.url;
+    link.download = note.name;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
-function deleteNote(index) {
+async function deleteNote(index) {
     const note = filteredNotes[index];
     
     if (!confirm(`Are you sure you want to delete "${note.name}"?`)) {
         return;
     }
     
-    // Find index in allNotes
-    const allIndex = allNotes.findIndex(n => 
-        n.name === note.name && 
-        n.uploadDate === note.uploadDate
-    );
-    
-    if (allIndex !== -1) {
-        allNotes.splice(allIndex, 1);
-        localStorage.setItem('uploadedNotes', JSON.stringify(allNotes));
+    try {
+        const response = await fetch('https://project-iqv0.onrender.com/delete-note', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: note.path })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete');
+        }
+        
+        alert('Note deleted successfully!');
+        await loadNotes();
+    } catch (error) {
+        alert('Failed to delete note: ' + error.message);
     }
-    
-    // Reload notes
-    loadNotes();
-    handleSearch();
 }
 
 function getFileIcon(ext) {
