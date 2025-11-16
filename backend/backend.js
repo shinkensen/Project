@@ -145,6 +145,3 @@ app.get("/notes", async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
-
-app.post("")
