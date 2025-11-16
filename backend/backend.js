@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import express from "express";
 import cors from "cors";
-import multer from 'multer'; 
+import multer from 'multer';
+import OpenAI from 'openai';
 
 // ============================================
 // 🔑 OPENAI API KEY (from Render environment variable)
@@ -9,6 +10,9 @@ import multer from 'multer';
 const OPENAI_API_KEY = process.env["OPENAI-KEY"] || "";
 // Set OPENAI-KEY in your Render dashboard environment variables
 // ============================================
+
+// Initialize OpenAI client
+const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 
 let url = "https://project-iqv0.onrender.com";
 const supabase = createClient(
@@ -265,8 +269,56 @@ app.post("/chat", async (req, res) => {
 
         console.log(`Found ${allFiles.length} notes for user ${userId}`);
 
-        // Generate contextual response
-        const response = generateResponse(message, allFiles, conversationHistory);
+        // Use OpenAI API if available, otherwise use fallback
+        let response;
+        if (openai) {
+            try {
+                // Build context about user's notes
+                const notesContext = allFiles.length > 0 
+                    ? `The user has ${allFiles.length} uploaded notes covering these subjects: ${[...new Set(allFiles.map(f => f.subject))].join(', ')}. Note files: ${allFiles.map(n => n.name).slice(0, 10).join(', ')}${allFiles.length > 10 ? '...' : ''}.`
+                    : "The user has not uploaded any notes yet.";
+
+                // Build conversation history for context
+                const messages = [
+                    {
+                        role: "system",
+                        content: `You are IntelliNotes AI, a helpful study assistant. ${notesContext} Help students understand concepts, create summaries, generate practice questions, and provide study strategies. Be concise, clear, and educational. If the user has notes, reference them when relevant. If not, provide general educational help on any topic they ask about.`
+                    }
+                ];
+
+                // Add conversation history (last 10 messages)
+                if (conversationHistory && Array.isArray(conversationHistory)) {
+                    conversationHistory.slice(-10).forEach(msg => {
+                        if (msg.type === 'user') {
+                            messages.push({ role: "user", content: msg.text });
+                        } else if (msg.type === 'ai') {
+                            messages.push({ role: "assistant", content: msg.text });
+                        }
+                    });
+                }
+
+                // Add current message
+                messages.push({ role: "user", content: message });
+
+                console.log('Calling OpenAI API...');
+                const completion = await openai.chat.completions.create({
+                    model: "gpt-3.5-turbo",
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 500
+                });
+
+                response = completion.choices[0].message.content;
+                console.log('OpenAI response received');
+            } catch (openaiError) {
+                console.error('OpenAI API error:', openaiError);
+                // Fallback to rule-based response
+                response = generateResponse(message, allFiles, conversationHistory);
+            }
+        } else {
+            console.log('OpenAI not configured, using fallback response');
+            response = generateResponse(message, allFiles, conversationHistory);
+        }
         
         console.log('Sending response:', response.substring(0, 100) + '...');
         
