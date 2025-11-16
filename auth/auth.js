@@ -10,6 +10,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let isLoginMode = true;
 
+    // Create toast container
+    const toastContainer = document.createElement('div');
+    toastContainer.className = 'toast-container';
+    document.body.appendChild(toastContainer);
+
     // Switch between login and signup modes
     switchAuthLink.addEventListener('click', function(e) {
         e.preventDefault();
@@ -41,12 +46,40 @@ document.addEventListener('DOMContentLoaded', function() {
             fullNameInput.setAttribute('required', 'true');
         }
 
-        // Re-attach event listener to the new link (FIXED: use event delegation instead)
+        // Re-attach event listener to the new link
         const newLink = document.getElementById('switchAuthLink');
         newLink.addEventListener('click', function(e) {
             e.preventDefault();
             toggleAuthMode();
         });
+    }
+
+    // Show toast message
+    function showToast(title, message, type = 'error') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        toast.innerHTML = `
+            <div class="toast-content">
+                <div class="toast-title">${title}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close">&times;</button>
+        `;
+
+        const closeBtn = toast.querySelector('.toast-close');
+        closeBtn.addEventListener('click', () => {
+            toast.remove();
+        });
+
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 3000);
+
+        toastContainer.appendChild(toast);
     }
 
     // Handle form submission
@@ -66,7 +99,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const fullName = fullNameInput.value;
 
             if (password !== confirmPassword) {
-                alert('Passwords do not match!');
+                showToast('Password Mismatch', 'Passwords do not match! Please try again.');
+                return;
+            }
+
+            if (password.length < 6) {
+                showToast('Weak Password', 'Password should be at least 6 characters long.');
                 return;
             }
 
@@ -79,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loginUser(email, password) {
         try {
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Signing in...';
+            submitBtn.innerHTML = '<span class="loading-spinner"></span>Signing in...';
             
             const res = await fetch('https://project-iqv0.onrender.com/loginEmail', {
                 method: 'POST',
@@ -90,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await res.json();
             
             if (!res.ok) {
-                alert("Login failed: " + (data.error || 'Invalid credentials'));
+                showToast('Login Failed', data.error || 'Invalid email or password. Please try again.');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Sign In';
                 return;
@@ -101,10 +139,15 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.setItem('userEmail', email);
             localStorage.setItem('isLoggedIn', 'true');
             
-            // Redirect to chatbot page
-            window.location.href = '../chatbot.html';
+            showToast('Welcome Back!', 'Login successful! Redirecting...', 'success');
+            
+            // Redirect to chatbot page after a short delay
+            setTimeout(() => {
+                window.location.href = '../chatbot.html';
+            }, 1500);
+            
         } catch (error) {
-            alert('Network error: ' + error.message);
+            showToast('Network Error', 'Unable to connect to server. Please check your connection.');
             submitBtn.disabled = false;
             submitBtn.textContent = 'Sign In';
         }
@@ -114,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function registerUser(email, password, fullName) {
         try {
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Creating account...';
+            submitBtn.innerHTML = '<span class="loading-spinner"></span>Creating account...';
             
             const res = await fetch('https://project-iqv0.onrender.com/sign-up', {
                 method: 'POST',
@@ -125,17 +168,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await res.json();
             
             if (!res.ok) {
-                alert("Registration failed: " + (data.error || 'Unable to create account'));
+                showToast('Registration Failed', data.error || 'Unable to create account. Please try again.');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Sign Up';
                 return;
             }
             
-            alert('Registration successful! Please check your email to verify your account, then log in.');
-            toggleAuthMode();
-            submitBtn.disabled = false;
+            showToast('Success!', 'Account created! Please check your email to verify your account.', 'success');
+            
+            // Switch to login mode after successful registration
+            setTimeout(() => {
+                toggleAuthMode();
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign In';
+            }, 2000);
+            
         } catch (error) {
-            alert('Network error: ' + error.message);
+            showToast('Network Error', 'Unable to connect to server. Please check your connection.');
             submitBtn.disabled = false;
             submitBtn.textContent = 'Sign Up';
         }
