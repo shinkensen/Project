@@ -45,10 +45,6 @@ app.post("/sign-up",async(req,res) =>{
     uuid = req.userId;
     try{
         const{data, error} = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: `${url}`
-            }
         });
         if(error){
             return res.status(500).json({error: error.message});
