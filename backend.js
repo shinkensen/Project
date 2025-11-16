@@ -1,14 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 import express from "express";
 import cors from "cors";
-let url = "";
+let url = "https://www.";
 const supabase = createClient(
     "https://vcrmkjjzeiwirwszqxew.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjcm1ramp6ZWl3aXJ3c3pxeGV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMjA0NzIsImV4cCI6MjA3ODc5NjQ3Mn0.7n9xIL72BRGEtqCkGZ0C-LGsxrs4MciLh1En2lv-rP4"
 )
 const app = express();
 app.use(cors());
-
+const multer = require("multer");
+const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(express.json());
 
@@ -17,16 +18,27 @@ app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
 
-app.post("/upload-notes",async(req,res)=>{
-    uuid = req.userId;
-    file
-    const { data, error } = await supabase.storage
-        .from("notes")
-        .upload(`user123/${Date.now()}-${file.name}`, file)
-    if (error) {
-        res.status(500).json({error: error.message});
-    } else {
-        res.status(200).json({message: "uploaded"});
+app.post("/upload-notes",upload.single("file"), async(req,res)=>{
+    try{
+        const userId = req.userId || "anonymous";
+        const file = req.file;
+
+        if (!file) {
+        return res.status(400).json({ error: "No file uploaded" });
+        }
+        const filePath = `${userId}/${Date.now()}-${file.originalname}`;
+        const { data, error } = await supabase.storage
+            .from("notes")
+            .upload(filePath, file.buffer, {
+                contentType: file.mimetype, 
+            });
+        if (error) {
+            return res.status(500).json({ error: error.message });
+        }
+        res.status(200).json({ message: "Uploaded", path: filePath });
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
     }
 })
 app.post("/sign-up",async(req,res) =>{
@@ -68,32 +80,71 @@ app.post("/auth/callback", async(req, res)=>{
     }
 });
 
-app.post("/loginEmail",async(req,res) => {
-    const {data, error} = await supabase.auth.signInWithPassword({email: req.email, password: req.password});
-    if (error){
-        res.status(500).json({error: error});
-    }else{
-        res.status(200).json({userId: data.user.id});
+app.post("/loginEmail", async (req, res) => {
+    const { email, password } = req.body;
+    
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email, 
+            password: password
+        });
+        
+        if (error) {
+            return res.status(400).json({ error: error.message });
+        }
+        res.status(200).json({ userId: data.user.id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
-app.post("/loginGoogle",async(req,res) => { const {data, error} = await supabase.auth.signInWithOAuth({email: req.email, password: req.password});
-    if (error){
-        res.status(500).json({error: error});
-    }else{
-        res.status(200).json({userId: data.user.id});
+app.post("/loginGoogle", async (req, res) => {
+    try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: `${url}/auth/callback` // You need to set this URL
+            }
+        });
+        
+        if (error) {
+            return res.status(400).json({ error: error.message });
+        }
+        res.status(200).json({ url: data.url });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.get("/notes", async (req, res) => {
+    try {
+    // List all files in the "notes" bucket
+    const { data, error } = await supabase.storage
+        .from("notes")
+         .list(); // optionally pass a folder name here
+
+    if (error) {
+        return res.status(500).json({ error: error.message });
+    }
+
+    // Map each file to its public URL
+    const files = data.map(file => {
+        const { data: publicUrl } = supabase.storage
+            .from("notes")
+            .getPublicUrl(file.name);
+
+        return {
+            name: file.name,
+            url: publicUrl.publicUrl,
+            updated_at: file.updated_at,
+            size: file.metadata?.size
+        };
+    });
+
+    res.status(200).json({ files });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
-app.get("/notes",async(req,res) => {
-    const {data, error} = await supabase.storage
-    .from("notes")
-    .download()
-    if (error){
-        res.status(500).json({error: error});
-    }else{
-        res.status(200).json({message: "here is the data"});
-    }
-});
 
 app.post("")
