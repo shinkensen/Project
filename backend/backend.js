@@ -216,7 +216,7 @@ app.delete("/delete-note", async (req, res) => {
 app.post("/chat", async (req, res) => {
     try {
         console.log('Chat request received:', req.body);
-        const { message, userId, conversationHistory } = req.body;
+        const { message, userId, conversationHistory } = req.body || {};
         
         if (!message) {
             console.log('Error: No message provided');
@@ -269,56 +269,12 @@ app.post("/chat", async (req, res) => {
 
         console.log(`Found ${allFiles.length} notes for user ${userId}`);
 
-        // Use OpenAI API if available, otherwise use fallback
-        let response;
-        if (openai) {
-            try {
-                // Build context about user's notes
-                const notesContext = allFiles.length > 0 
-                    ? `The user has ${allFiles.length} uploaded notes covering these subjects: ${[...new Set(allFiles.map(f => f.subject))].join(', ')}. Note files: ${allFiles.map(n => n.name).slice(0, 10).join(', ')}${allFiles.length > 10 ? '...' : ''}.`
-                    : "The user has not uploaded any notes yet.";
-
-                // Build conversation history for context
-                const messages = [
-                    {
-                        role: "system",
-                        content: `You are IntelliNotes AI, a helpful study assistant. ${notesContext} Help students understand concepts, create summaries, generate practice questions, and provide study strategies. Be concise, clear, and educational. If the user has notes, reference them when relevant. If not, provide general educational help on any topic they ask about.`
-                    }
-                ];
-
-                // Add conversation history (last 10 messages)
-                if (conversationHistory && Array.isArray(conversationHistory)) {
-                    conversationHistory.slice(-10).forEach(msg => {
-                        if (msg.type === 'user') {
-                            messages.push({ role: "user", content: msg.text });
-                        } else if (msg.type === 'ai') {
-                            messages.push({ role: "assistant", content: msg.text });
-                        }
-                    });
-                }
-
-                // Add current message
-                messages.push({ role: "user", content: message });
-
-                console.log('Calling OpenAI API...');
-                const completion = await openai.chat.completions.create({
-                    model: "gpt-3.5-turbo",
-                    messages: messages,
-                    temperature: 0.7,
-                    max_tokens: 500
-                });
-
-                response = completion.choices[0].message.content;
-                console.log('OpenAI response received');
-            } catch (openaiError) {
-                console.error('OpenAI API error:', openaiError);
-                // Fallback to rule-based response
-                response = generateResponse(message, allFiles, conversationHistory);
-            }
-        } else {
-            console.log('OpenAI not configured, using fallback response');
-            response = generateResponse(message, allFiles, conversationHistory);
-        }
+        const response = await generateResponse({
+            message,
+            notes: allFiles,
+            history: conversationHistory,
+            userId: userId || "anonymous"
+        });
         
         console.log('Sending response:', response.substring(0, 100) + '...');
         
@@ -333,7 +289,57 @@ app.post("/chat", async (req, res) => {
     }
 });
 
-function generateResponse(message, notes, history) {
+async function generateResponse({ message, notes, history, userId }) {
+    const safeHistory = Array.isArray(history) ? history : [];
+
+    if (openai) {
+        try {
+            const notesContext = notes.length > 0 
+                ? `The user has ${notes.length} uploaded notes covering these subjects: ${[...new Set(notes.map(f => f.subject))].join(', ')}.`
+                : "The user has not uploaded any notes yet.";
+
+            const messages = [
+                {
+                    role: "system",
+                    content: `You are IntelliNotes AI, a helpful study assistant for user ${userId}. ${notesContext} Help students understand concepts, create summaries, generate practice questions, and provide study strategies.`
+                }
+            ];
+
+            safeHistory.slice(-10).forEach(msg => {
+                if (msg.type === 'user') {
+                    messages.push({ role: "user", content: msg.text });
+                } else if (msg.type === 'ai') {
+                    messages.push({ role: "assistant", content: msg.text });
+                }
+            });
+
+            messages.push({ role: "user", content: message });
+
+            console.log('Calling OpenAI for generateResponse...');
+            const completion = await openai.chat.completions.create({
+                model: "gpt-3.5-turbo",
+                messages,
+                temperature: 0.65,
+                max_tokens: 500
+            });
+
+            const aiReply = completion.choices[0]?.message?.content?.trim();
+            if (aiReply) {
+                console.log('OpenAI responded successfully.');
+                return aiReply;
+            }
+            console.warn('OpenAI returned empty response, falling back.');
+        } catch (error) {
+            console.error('OpenAI generateResponse error:', error.message || error);
+        }
+    } else {
+        console.warn('OpenAI client not configured, using fallback response.');
+    }
+
+    return generateFallbackResponse(message, notes);
+}
+
+function generateFallbackResponse(message, notes) {
     const lowerMessage = message.toLowerCase();
     const noteCount = notes.length;
     const subjects = [...new Set(notes.map(n => n.subject))];
