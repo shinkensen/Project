@@ -289,15 +289,7 @@ function generateResponse(message, notes, history) {
     // Build context about available notes
     const notesContext = noteCount > 0 
         ? `You have ${noteCount} notes uploaded covering ${subjects.length} subject(s): ${subjects.map(formatSubject).join(', ')}.`
-        : "You haven't uploaded any notes yet.";
-
-    // Check for specific intents
-    if (noteCount === 0) {
-        if (lowerMessage.includes('upload') || lowerMessage.includes('notes')) {
-            return `${notesContext} To get started, please upload your study materials using the Upload page. Once uploaded, I'll be able to help you study, create summaries, generate questions, and more!`;
-        }
-        return `${notesContext} Please upload your study materials first so I can provide personalized assistance with your coursework.`;
-    }
+        : "";
 
     // List notes
     if (lowerMessage.includes('what notes') || lowerMessage.includes('list') || lowerMessage.includes('show')) {
@@ -316,36 +308,55 @@ function generateResponse(message, notes, history) {
 
     // Explain/Teach
     if (lowerMessage.includes('explain') || lowerMessage.includes('what is') || lowerMessage.includes('how does')) {
-        return `I'd be happy to explain concepts from your notes! ${notesContext}\n\nTo provide the most accurate explanation, please specify:\n1. Which subject (${subjects.map(formatSubject).join(', ')})\n2. The specific concept or topic\n\nExample: "Explain calculus derivatives" or "What is photosynthesis in my biology notes?"`;
+        if (noteCount > 0) {
+            return `I'd be happy to explain concepts from your notes! ${notesContext}\n\nTo provide the most accurate explanation, please specify:\n1. Which subject (${subjects.map(formatSubject).join(', ')})\n2. The specific concept or topic\n\nExample: "Explain calculus derivatives" or "What is photosynthesis in my biology notes?"`;
+        }
+        return `I'd be happy to explain any concept! Please ask me about a specific topic or subject, and I'll do my best to explain it clearly. Examples:\n• "Explain photosynthesis"\n• "What is the Pythagorean theorem?"\n• "How does DNA replication work?"`;
     }
 
     // Summarize
     if (lowerMessage.includes('summary') || lowerMessage.includes('summarize')) {
-        return `I can create comprehensive summaries of your notes! ${notesContext}\n\nWhich subject would you like me to summarize?\n${subjects.map(s => `• ${formatSubject(s)}`).join('\n')}\n\nOr specify a particular file name for a focused summary.`;
+        if (noteCount > 0) {
+            return `I can create comprehensive summaries of your notes! ${notesContext}\n\nWhich subject would you like me to summarize?\n${subjects.map(s => `• ${formatSubject(s)}`).join('\n')}\n\nOr specify a particular file name for a focused summary.`;
+        }
+        return `I can help summarize any topic! Just tell me what subject or concept you'd like me to summarize. Example: "Summarize World War 2" or "Summarize the water cycle"`;
     }
 
     // Practice Questions
     if (lowerMessage.includes('question') || lowerMessage.includes('quiz') || lowerMessage.includes('test') || lowerMessage.includes('practice')) {
-        return `Perfect! I can generate practice questions from your notes. ${notesContext}\n\nI can create:\n• Multiple choice questions\n• Short answer questions\n• Essay prompts\n• Problem-solving exercises\n\nWhich subject would you like to practice? (${subjects.map(formatSubject).join(', ')})`;
+        if (noteCount > 0) {
+            return `Perfect! I can generate practice questions from your notes. ${notesContext}\n\nI can create:\n• Multiple choice questions\n• Short answer questions\n• Essay prompts\n• Problem-solving exercises\n\nWhich subject would you like to practice? (${subjects.map(formatSubject).join(', ')})`;
+        }
+        return `I can help create practice questions on any topic! Tell me what subject you'd like to practice. I can create:\n• Multiple choice questions\n• Short answer questions\n• Essay prompts\n• Problem-solving exercises\n\nExample: "Create math practice questions" or "Quiz me on biology"`;
     }
 
     // Study help
     if (lowerMessage.includes('study') || lowerMessage.includes('prepare') || lowerMessage.includes('exam')) {
-        return `I'm here to help you study effectively! ${notesContext}\n\nHere's what I can do:\n\n📚 **Content Review**\n• Summarize key points\n• Explain difficult concepts\n• Create study guides\n\n✍️ **Practice & Testing**\n• Generate practice questions\n• Create flashcard topics\n• Suggest study exercises\n\n🎯 **Study Strategies**\n• Recommend study schedules\n• Provide memory techniques\n• Offer exam preparation tips\n\nWhat would you like to start with?`;
+        if (noteCount > 0) {
+            return `I'm here to help you study effectively! ${notesContext}\n\nHere's what I can do:\n\n📚 **Content Review**\n• Summarize key points\n• Explain difficult concepts\n• Create study guides\n\n✍️ **Practice & Testing**\n• Generate practice questions\n• Create flashcard topics\n• Suggest study exercises\n\n🎯 **Study Strategies**\n• Recommend study schedules\n• Provide memory techniques\n• Offer exam preparation tips\n\nWhat would you like to start with?`;
+        }
+        return `I'm here to help you study effectively!\n\nHere's what I can do:\n\n📚 **Content Review**\n• Summarize key points\n• Explain difficult concepts\n• Create study guides\n\n✍️ **Practice & Testing**\n• Generate practice questions\n• Create flashcard topics\n• Suggest study exercises\n\n🎯 **Study Strategies**\n• Recommend study schedules\n• Provide memory techniques\n• Offer exam preparation tips\n\nWhat subject would you like to study?`;
     }
 
     // Compare/Analyze
     if (lowerMessage.includes('compare') || lowerMessage.includes('difference') || lowerMessage.includes('similar')) {
-        return `I can help you compare concepts across your notes! ${notesContext}\n\nTo compare effectively, please tell me:\n1. What topics or concepts you'd like to compare\n2. Which subjects they're from\n\nExample: "Compare cellular respiration and photosynthesis" or "What's the difference between derivatives and integrals?"`;
+        return `I can help you compare concepts! ${noteCount > 0 ? notesContext : ''}\n\nTo compare effectively, please tell me:\n1. What topics or concepts you'd like to compare\n${noteCount > 0 ? '2. Which subjects they\'re from\n\n' : '\n'}Example: "Compare cellular respiration and photosynthesis" or "What's the difference between derivatives and integrals?"`;
     }
 
     // Tips/Help
     if (lowerMessage.includes('tip') || lowerMessage.includes('advice') || lowerMessage.includes('how to')) {
-        return `Here are some study tips based on your uploaded materials:\n\n💡 **Effective Study Techniques:**\n• Review notes within 24 hours of uploading\n• Create concept maps connecting ideas\n• Practice active recall with self-quizzing\n• Use spaced repetition for long-term retention\n• Teach concepts to others (or explain them out loud)\n\n📝 **Using Your Notes:**\n${subjects.map(s => `• ${formatSubject(s)}: Focus on key concepts and examples`).join('\n')}\n\nWould you like specific study strategies for any subject?`;
+        if (noteCount > 0) {
+            return `Here are some study tips based on your uploaded materials:\n\n💡 **Effective Study Techniques:**\n• Review notes within 24 hours of uploading\n• Create concept maps connecting ideas\n• Practice active recall with self-quizzing\n• Use spaced repetition for long-term retention\n• Teach concepts to others (or explain them out loud)\n\n📝 **Using Your Notes:**\n${subjects.map(s => `• ${formatSubject(s)}: Focus on key concepts and examples`).join('\n')}\n\nWould you like specific study strategies for any subject?`;
+        }
+        return `Here are some effective study tips:\n\n💡 **Effective Study Techniques:**\n• Review material regularly (spaced repetition)\n• Create concept maps connecting ideas\n• Practice active recall with self-quizzing\n• Use the Feynman technique (teach it to others)\n• Break study sessions into 25-minute focused blocks\n\n📝 **General Study Advice:**\n• Study in a distraction-free environment\n• Get enough sleep (crucial for memory consolidation)\n• Take regular breaks to maintain focus\n• Practice retrieval (testing yourself)\n\nWhat specific subject or topic would you like study advice for?`;
     }
 
     // Default helpful response
-    return `I'm your AI study assistant! ${notesContext}\n\nI can help you:\n• 📖 **Understand** - Explain concepts and topics\n• 📝 **Summarize** - Create concise study summaries\n• ❓ **Practice** - Generate questions and quizzes\n• 🎯 **Study** - Provide study tips and strategies\n• 🔍 **Analyze** - Compare and contrast concepts\n\nWhat would you like to work on? Just ask about any topic from your ${subjects.map(formatSubject).join(' or ')} notes!`;
+    if (noteCount > 0) {
+        return `I'm your AI study assistant! ${notesContext}\n\nI can help you:\n• 📖 **Understand** - Explain concepts and topics\n• 📝 **Summarize** - Create concise study summaries\n• ❓ **Practice** - Generate questions and quizzes\n• 🎯 **Study** - Provide study tips and strategies\n• 🔍 **Analyze** - Compare and contrast concepts\n\nWhat would you like to work on? Just ask about any topic from your ${subjects.map(formatSubject).join(' or ')} notes!`;
+    }
+    
+    return `Hello! I'm your AI study assistant. I can help you with:\n\n• 📖 **Learning** - Explain any concept or topic\n• 📝 **Summarizing** - Break down complex subjects\n• ❓ **Practice** - Create questions and quizzes\n• 🎯 **Study Tips** - Provide effective study strategies\n• 🔍 **Comparisons** - Compare and contrast concepts\n\nJust ask me anything! Example questions:\n• "Explain photosynthesis"\n• "What is the Pythagorean theorem?"\n• "Create practice questions for calculus"\n• "Summarize the French Revolution"`;
 }
 
 function formatSubject(subject) {
