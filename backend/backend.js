@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import express from "express";
 import cors from "cors";
+import multer from 'multer'; 
 let url = "https://www.";
 const supabase = createClient(
     "https://vcrmkjjzeiwirwszqxew.supabase.co",
@@ -8,7 +9,6 @@ const supabase = createClient(
 )
 const app = express();
 app.use(cors());
-const multer = require("multer");
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(express.json());

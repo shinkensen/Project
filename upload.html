@@ -1,0 +1,37 @@
+<html>
+    <main>
+            <!-- Upload Tab -->
+            <div class="tab-content active" id="upload-tab">
+                <section class="upload-section">
+                    <h2>Upload Your Notes</h2>
+                    <div class="subject-selector">
+                        <label for="subjectSelect">Select Subject:</label>
+                        <select id="subjectSelect">
+                            <option value="mathematics">📐 Mathematics</option>
+                            <option value="science">🔬 Science</option>
+                            <option value="history">📜 History</option>
+                            <option value="literature">📖 Literature</option>
+                            <option value="computer-science">💻 Computer Science</option>
+                            <option value="languages">🌍 Languages</option>
+                            <option value="arts">🎨 Arts</option>
+                            <option value="other">📌 Other</option>
+                        </select>
+                    </div>
+                    <div class="upload-area" id="uploadArea">
+                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                        </svg>
+                        <p class="upload-text">Drag & drop your notes here</p>
+                        <p class="upload-subtext">or click to browse</p>
+                        <p class="file-types">Supported: PDF, TXT, DOCX, MD</p>
+                        <input type="file" id="fileInput" accept=".pdf,.txt,.docx,.doc,.md" multiple hidden>
+                    </div>
+                    
+                    <!-- Uploaded Files List -->
+                    <div class="uploaded-files" id="uploadedFiles">
+                        <h3>Uploaded Notes (<span id="fileCount">0</span>)</h3>
+                        <div class="files-list" id="filesList"></div>
+                    </div>
+                </section>
+            </div>
+</html>
