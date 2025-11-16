@@ -668,38 +668,4 @@ footer {
 }
 
 /* Chatbot Access Section */
-.chatbot-access {
-    margin: 40px 0;
-    padding: 20px;
-    border: 2px dashed #4a90e2;
-    border-radius: 12px;
-    text-align: center;
-    background: #f9fbff;
-}
 
-.chatbot-access h2 {
-    font-size: 1.5rem;
-    margin-bottom: 10px;
-    color: #4a90e2;
-}
-
-.chatbot-access p {
-    font-size: 1rem;
-    margin-bottom: 15px;
-    color: #555;
-}
-
-.chatbot-button {
-    background-color: #4a90e2;
-    color: #fff;
-    border: none;
-    padding: 12px 24px;
-    font-size: 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.3s ease;
-}
-
-.chatbot-button:hover {
-    background-color: #357abd;
-}
