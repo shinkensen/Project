@@ -255,13 +255,6 @@ async function sendMessage() {
         hideTypingIndicator();
         addMessage(data.response, 'ai');
         sendButton.disabled = false;
-        
-        // Optional: Show notes count if available
-        if (data.notesAvailable !== undefined && data.notesAvailable === 0) {
-            setTimeout(() => {
-                addMessage('💡 Tip: Upload your study materials using the Upload page to get personalized help!', 'ai');
-            }, 500);
-        }
     } catch (error) {
         console.error('Chat error:', error);
         hideTypingIndicator();
