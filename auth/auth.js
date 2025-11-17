@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            showToast('Success!', 'Account created! Please check your email to verify your account.', 'success');
+            showToast('Success!', 'Account created! Enjoy!', 'success');
             
             // Switch to login mode after successful registration
             setTimeout(() => {
