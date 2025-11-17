@@ -24,6 +24,14 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
+try {
+    const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+    console.log("Env length:", raw?.length);
+    const credentials = JSON.parse(raw);
+    console.log("Loaded service account:", credentials.client_email);
+} catch (err) {
+    console.error("Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON:", err);
+}
 
 app.post("/upload-notes",upload.single("file"), async(req,res)=>{
     try{
