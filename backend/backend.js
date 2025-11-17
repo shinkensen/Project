@@ -1,71 +1,38 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from "@google/genai";
+import { GoogleAuth } from "google-auth-library";
+
 import express from "express";
 import cors from "cors";
 import multer from 'multer';
-
-// Parse Google credentials from environment variable
-const credentialsJSON = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-if (!credentialsJSON) {
-    console.error("ERROR: GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable is not set");
-    process.exit(1);
-}
-
-let credentials;
-try {
-    credentials = JSON.parse(credentialsJSON);
-    console.log("✓ Google credentials loaded successfully");
-    console.log("✓ Service account:", credentials.client_email);
-    console.log("✓ Project ID:", credentials.project_id);
-} catch (error) {
-    console.error("ERROR: Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON:", error.message);
-    process.exit(1);
-}
-
-// Initialize Gemini client with credentials
-const gemini = new GoogleGenAI({
-    authClient: {
-        async getAccessToken() {
-            // Import GoogleAuth here to avoid issues
-            const { GoogleAuth } = await import("google-auth-library");
-            const auth = new GoogleAuth({
-                credentials: credentials,
-                scopes: ["https://www.googleapis.com/auth/cloud-platform"]
-            });
-            const client = await auth.getClient();
-            const tokenResponse = await client.getAccessToken();
-            return tokenResponse.token;
-        }
-    }
+const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+const auth = new GoogleAuth({
+    credentials,
+    scopes: ["https://www.googleapis.com/auth/cloud-platform"]
 });
-
-console.log("✓ Gemini client initialized successfully");
-
+const gemini =  new GoogleGenAI({auth});
 let url = "https://project-iqv0.onrender.com";
 const supabase = createClient(
     "https://vcrmkjjzeiwirwszqxew.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjcm1ramp6ZWl3aXJ3c3pxeGV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMjA0NzIsImV4cCI6MjA3ODc5NjQ3Mn0.7n9xIL72BRGEtqCkGZ0C-LGsxrs4MciLh1En2lv-rP4"
 )
-
 const app = express();
 app.use(cors());
 const upload = multer({ storage: multer.memoryStorage() });
 app.use(express.json());
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
-    console.log(`✓ Server running on port ${PORT}`);
-    console.log(`✓ Backend ready at ${url}`);
+    console.log(`Server running on http://localhost:${PORT}`);
 });
 
-app.post("/upload-notes", upload.single("file"), async(req, res) => {
-    try {
+app.post("/upload-notes",upload.single("file"), async(req,res)=>{
+    try{
         const userId = req.userId || "anonymous";
         const file = req.file;
         const subject = req.body.subject || "other";
 
         if (!file) {
-            return res.status(400).json({ error: "No file uploaded" });
+        return res.status(400).json({ error: "No file uploaded" });
         }
         const filePath = `${subject}/${userId}/${Date.now()}-${file.originalname}`;
         const { data, error } = await supabase.storage
@@ -89,39 +56,38 @@ app.post("/upload-notes", upload.single("file"), async(req, res) => {
         res.status(500).json({ error: err.message });
     }
 })
-
-app.post("/sign-up", async(req, res) => {
+app.post("/sign-up",async(req,res) =>{
     let email = req.body.email;
     let pass = req.body.password;
-    try {
-        const { data, error } = await supabase.auth.signUp({ email: email, password: pass });
-        if (error) {
-            return res.status(500).json({ error: error.message });
+    try{
+        const{data, error} = await supabase.auth.signUp({email: email, password: pass});
+        if(error){
+            return res.status(500).json({error: error.message});
         }
-        res.status(200).json({ message: "valid" });
+        res.status(200).json({message: "valid"});
     }
-    catch(err) {
-        res.status(500).json({ error: err.message });
+    catch(err){
+        res.status(500).json({error: error.message});
     }
 })
 
-app.post("/auth/callback", async(req, res) => {
-    try {
+app.post("/auth/callback", async(req, res)=>{
+    try{
         const accessToken = req.body.access_token; 
-        const { data: { user }, error } = await supabase.auth.getUser(accessToken);
-        if (error) {
-            return res.status(500).json({ message: error.message });
+        const {data: {user}, error } = await supabase.auth.getUser(accessToken);
+        if(error){
+            return res.status(500).json({message: error.message});
         }
         const isNewUser = user.created_at === user.last_sign_in_at;
-        if (isNewUser) {
-            res.json({ message: "New user,", user });
+        if(isNewUser){
+            res.json({message: "New user,", user});
         }
-        else {
-            res.json({ message: "Welcome back,", user });
+        else{
+            res.json({message: "Welcome back,", user});
         }
     }
-    catch(err) {
-        res.status(500).json({ error: err.message });
+    catch(err){
+        res.status(500).json({error: error.message});
     }
 });
 
@@ -160,7 +126,6 @@ app.post("/loginGoogle", async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
 app.get("/notes", async (req, res) => {
     try {
         const allFiles = [];
@@ -184,11 +149,13 @@ app.get("/notes", async (req, res) => {
                         });
                     if (!fileError && files) {
                         for (const file of files) {
+                            // Skip folders, only process actual files
                             if (file.id && !file.name.includes('/')) {
                                 const filePath = `${subject}/${folder.name}/${file.name}`;
                                 const { data: publicUrl } = supabase.storage
                                     .from("notes")
                                     .getPublicUrl(filePath);
+                                // Extract original filename from the timestamp prefix
                                 const originalName = file.name.split('-').slice(1).join('-') || file.name;
                                 
                                 allFiles.push({
@@ -234,31 +201,20 @@ app.delete("/delete-note", async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
-app.post("/chat", async(req, res) => {
-    try {
-        console.log("Chat request received:", { prompt: req.body.prompt?.substring(0, 50) });
-        
-        const response = await gemini.models.generateContent({
-            model: "gemini-2.0-flash-exp",
-            contents: [{ role: "user", parts: [{ text: req.body.prompt }] }],
-        });
-        
-        const output = response.text();
-        console.log("Gemini response received, length:", output?.length);
-        
-        if (!output) {
-            return res.status(500).json({ error: "Empty response from Gemini" });
-        }
-        
-        res.status(200).json({ response: output });
+app.post("/chat",async(req,res)=>{
+    try{
+    const response = await gemini.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: [{role: "user", parts: [{text: req.body.prompt}]}],
+    })
+    const output = response.text();
+    if (!output){
+        res.status(500).json({error: "Error in Gemini"});
     }
-    catch(err) {
-        console.error("Gemini Error:", {
-            message: err.message,
-            stack: err.stack,
-            name: err.name
-        });
-        res.status(500).json({ error: err.message });
+    res.status(200).json({response: output})
+    }
+    catch(err){
+        console.error("Gemini Error" , err.message,err);
+        res.status(500).json({error: err.message});
     }
 })
