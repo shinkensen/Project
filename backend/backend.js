@@ -6,6 +6,7 @@ import express from "express";
 import cors from "cors";
 import multer from 'multer';
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
 const auth = new GoogleAuth({
     credentials,
     scopes: ["https://www.googleapis.com/auth/cloud-platform"]
