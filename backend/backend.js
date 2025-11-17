@@ -5,12 +5,31 @@ import { GoogleAuth } from "google-auth-library";
 import express from "express";
 import cors from "cors";
 import multer from 'multer';
+const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+console.log("Env length:", raw?.length);
+console.log("Env starts with:", raw?.slice(0, 100));
+
 const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+console.log("Client email:", credentials.client_email);
+console.log("Project ID:", credentials.project_id);
+console.log("Private key length:", credentials.private_key.length);
+console.log("Private key first line:", credentials.private_key.split("\n")[0]);
+
 const auth = new GoogleAuth({
     credentials,
     scopes: ["https://www.googleapis.com/auth/cloud-platform"]
 });
+(async () => {
+  try {
+    const client = await auth.getClient();
+    console.log("Auth client created:", client.constructor.name);
+    const headers = await client.getRequestHeaders();
+    console.log("Sample auth headers:", headers);
+  } catch (err) {
+    console.error("Auth client creation failed:", err);
+  }
+})();
 const gemini =  new GoogleGenAI({auth});
 let url = "https://project-iqv0.onrender.com";
 const supabase = createClient(
