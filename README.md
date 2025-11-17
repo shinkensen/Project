@@ -3,71 +3,89 @@
 Student Hackpad Hackathon 2025 submission
 
 ## Overview
-IntelliNotes is a web application that allows students to upload their study notes and ask questions that get answered by an AI model trained on the uploaded content.
+IntelliNotes lets students upload study notes, generates automatic summaries, and feeds concise context into a Gemini-powered chatbot. A lightweight rate-limit system protects usage while keeping latency low.
 
 ## Features
-- 📤 **File Upload**: Drag & drop or click to upload notes (PDF, TXT, DOCX, MD)
-- 📚 **Multi-file Support**: Upload multiple note files at once
-- 💬 **AI Q&A Interface**: Ask questions about your uploaded notes
-- 🎨 **Modern UI**: Dark theme with smooth animations
-- 📱 **Responsive Design**: Works on desktop, tablet, and mobile
-- ⚡ **Real-time Feedback**: Typing indicators and instant responses
+- 📤 **Secure Note Uploads**: Files go straight into Supabase storage
+- 🧠 **Auto Summaries**: PDFs are parsed with `pdfjs-dist`, summarized via Hugging Face Inference (DistilBART), and cached in `note_summaries`
+- 💬 **Context-Aware Chat**: Gemini 2.5 Flash Lite receives only the most relevant summaries (≤3 snippets / 700 chars) to minimize tokens
+- 🚦 **Per-User Rate Limits**: Daily cap (default 20 prompts) tracked in Supabase `user_ai_limits`
+- 🎨 **Modern UI**: Dark theme, responsive layout, typing indicators, and character counter
+- 🔒 **Frontend Guardrails**: 250-character max prompts, disabled send button once limit hit, quota status display
 
 ## Getting Started
 
-### Option 1: Direct File Access
-Simply open `index.html` in your web browser:
+### 1. Install dependencies
 ```powershell
-Start-Process index.html
+cd backend
+npm install
 ```
 
-### Option 2: Local Server (Recommended)
-Using Python:
-```powershell
-python -m http.server 8000
-```
-Then visit: http://localhost:8000
+### 2. Configure environment variables
 
-Using Node.js (http-server):
+| Variable | Description |
+| --- | --- |
+| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | Google service account JSON string for Gemini access |
+| `GEMINI_API_KEY` | Vertex/Gemini API key |
+| `HF_TOKEN` | Hugging Face Inference token (fine-grained) |
+
+### 3. Create Supabase tables
+Run `backend/supabase-tables.sql` in the Supabase SQL editor to provision `note_summaries` and `user_ai_limits`.
+
+### 4. Start backend
+```powershell
+cd backend
+npm run start
+```
+Backend listens on `http://localhost:5000` by default.
+
+### 5. Serve frontend
+Use any static server from the project root:
 ```powershell
 npx http-server -p 8000
+# or
+python -m http.server 8000
 ```
+Visit `http://localhost:8000/chatbot.html`.
 
 ## How to Use
 1. **Upload Notes**: Click the upload area or drag & drop your study notes
-2. **Ask Questions**: Type your question in the text area
-3. **Get Answers**: The AI will respond based on your uploaded content
+2. **Auto Summaries**: Backend extracts + summarizes PDFs and stores results
+3. **Ask Questions**: Type up to 250 characters; counter and quota appear under the input
+4. **Get Answers**: Gemini replies with context trimmed to only relevant summaries
 
 ## Technical Stack
-- Pure HTML5, CSS3, JavaScript (no frameworks)
-- Responsive grid layout
-- CSS animations and transitions
-- File API for uploads
-- LocalStorage ready for persistence
+- **Frontend**: HTML/CSS/JS (vanilla)
+- **Backend**: Node.js + Express
+- **Storage/DB**: Supabase (file bucket + PostgreSQL)
+- **AI APIs**: Hugging Face Inference (DistilBART summaries) + Google Gemini 2.5 Flash Lite
+- **PDF Parsing**: `pdfjs-dist`
 
 ## Project Structure
 ```
 Project-1/
 ├── index.html      # Main HTML structure
 ├── style.css       # Styling and animations
-├── script.js       # Application logic
+├── script.js       # Landing interactions
+├── chatbot.html    # Chat UI
+├── chatbot.js      # Chat logic + quota UI
+├── backend/        # Express server, summarization, Supabase interactions
 └── README.md       # Documentation
 ```
 
 ## Future Enhancements
-- Backend API integration with actual AI model
-- PDF/DOCX text extraction
-- Conversation export
-- Note highlighting & search
-- User authentication
-- Cloud storage integration
+- Semantic search / embeddings for better context selection
+- Support for DOCX/TXT parsing pipeline
+- Conversation export and note highlighting
+- OAuth-based authentication and multi-tenant throttling
+- Scheduled summary regeneration when notes change
 
 ## Notes
-Current implementation uses simulated AI responses. In production:
-- Upload files to backend server
-- Extract text from PDFs/DOCX using proper libraries
-- Send to AI model (OpenAI, Claude, or custom trained model)
-- Return contextual answers based on note content
+Production deploy (Render) already runs the full pipeline. For local dev, ensure:
+- Supabase keys/bucket match the deployed instance or your own project
+- `HF_TOKEN` has `Make calls to Inference Providers` permission
+- Gemini project has access to `gemini-2.5-flash-lite`
+- Rate limiting limits can be tweaked via `DAILY_PROMPT_LIMIT` in `backend.js`
 
 ---
 Built with ❤️ for Student Hackpad Hackathon 2025
