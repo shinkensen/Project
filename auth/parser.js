@@ -56,13 +56,13 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     const aiSummary = await summarizeWithAI(extractedContent);
 
     res.status(200).json({
-      success: true,
-      filename: file.originalname,
-      extracted_file: outputFile,
-      preview: extractedContent.length > 500
+        success: true,
+        filename: file.originalname,
+        extracted_file: outputFile,
+        preview: extractedContent.length > 500
         ? extractedContent.slice(0, 500) + "..."
         : extractedContent,
-      ai_summary: aiSummary
+        ai_summary: aiSummary
     });
 
   } catch (err) {
