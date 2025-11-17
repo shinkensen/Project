@@ -426,7 +426,7 @@ app.post("/chat", async (req, res) => {
         }
         
         const userContext = await getUserContext(userId);
-        const enrichedPrompt = prompt + userContext;
+        const enrichedPrompt = prompt + " NOTICE TO GEMINI: keep this as short as possible " + userContext;
 
         const response = await fetch(
             `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
