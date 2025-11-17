@@ -88,19 +88,36 @@ async function extractPDFText(buffer) {
 async function summarizeText(text) {
     if (!text || text.length < 100) return 'No content to summarize.';
     
+    if (!process.env.HF_TOKEN) {
+        console.log('HF_TOKEN not set, using text excerpt');
+        return text.slice(0, 150) + '...';
+    }
+    
     try {
-        const result = await hf.summarization({
-            model: 'facebook/bart-large-cnn',
-            inputs: text.slice(0, 1024),
-            parameters: {
-                max_length: MAX_SUMMARY_LENGTH,
-                min_length: 30
-            }
+        const response = await fetch('https://router.huggingface.co/hf-inference/models/facebook/bart-large-cnn', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.HF_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                inputs: text.slice(0, 1024),
+                parameters: {
+                    max_length: MAX_SUMMARY_LENGTH,
+                    min_length: 30
+                }
+            })
         });
-        return result.summary_text || 'Summary not available.';
+        
+        if (!response.ok) {
+            throw new Error(`HF API error: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        return result[0]?.summary_text || text.slice(0, 150) + '...';
     } catch (error) {
         console.error('Summarization error:', error);
-        return 'Summary generation failed.';
+        return text.slice(0, 150) + '...';
     }
 }
 
