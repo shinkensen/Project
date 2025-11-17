@@ -224,20 +224,26 @@ app.delete("/delete-note", async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-app.post("/chat",async(req,res)=>{
-    try{
-    const response = await gemini.models.generateContent({
-        model: "gemini-2.0-flash-exp",
-        contents: [{role: "user", parts: [{text: req.body.prompt}]}],
-    })
-    const output = response.text();
-    if (!output){
-        res.status(500).json({error: "Error in Gemini"});
+import fetch from "node-fetch";
+
+app.post("/chat", async (req, res) => {
+    try {
+        const response = await fetch(
+        `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+            contents: [
+                { role: "user", parts: [{ text: req.body.prompt }] }
+            ]
+            })
+        }
+        );
+        const data = await response.json();
+        res.json(data);
+    } catch (err) {
+        console.error("Gemini API error:", err);
+        res.status(500).json({ error: err.message });
     }
-    res.status(200).json({response: output})
-    }
-    catch(err){
-        console.error("Gemini Error" , err.message,err);
-        res.status(500).json({error: err.message});
-    }
-})
+});
