@@ -1,15 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from "@google/genai";
 import { GoogleAuth } from "google-auth-library";
+
 import express from "express";
 import cors from "cors";
 import multer from 'multer';
-const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-const credentials = JSON.parse(raw);
+const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 const auth = new GoogleAuth({
+    credentials,
     scopes: ["https://www.googleapis.com/auth/cloud-platform"]
 });
-await auth.fromJSON(credentials);
 const gemini =  new GoogleGenAI({auth});
 let url = "https://project-iqv0.onrender.com";
 const supabase = createClient(
@@ -24,14 +24,6 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
-try {
-    const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-    console.log("Env length:", raw?.length);
-    const credentials = JSON.parse(raw);
-    console.log("Loaded service account:", credentials.client_email);
-} catch (err) {
-    console.error("Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON:", err);
-}
 
 app.post("/upload-notes",upload.single("file"), async(req,res)=>{
     try{
@@ -212,7 +204,7 @@ app.delete("/delete-note", async (req, res) => {
 app.post("/chat",async(req,res)=>{
     try{
     const response = await gemini.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.0-flash-exp",
         contents: [{role: "user", parts: [{text: req.body.prompt}]}],
     })
     const output = response.text();
