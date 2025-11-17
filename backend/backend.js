@@ -1,15 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from "@google/genai";
 import { GoogleAuth } from "google-auth-library";
-
 import express from "express";
 import cors from "cors";
 import multer from 'multer';
-const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+const credentials = JSON.parse(raw);
 const auth = new GoogleAuth({
-    credentials,
     scopes: ["https://www.googleapis.com/auth/cloud-platform"]
 });
+await auth.fromJSON(credentials);
 const gemini =  new GoogleGenAI({auth});
 let url = "https://project-iqv0.onrender.com";
 const supabase = createClient(
