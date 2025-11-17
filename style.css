@@ -1361,11 +1361,44 @@ footer {
     max-width: 900px;
     margin: 0.75rem auto 0;
     text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
 }
 
 .model-info {
     font-size: 0.8rem;
     color: var(--text-muted);
+    transition: color 0.2s ease;
+}
+
+.model-info.warning {
+    color: var(--warning, #f4c430);
+}
+
+.footer-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.quota-info {
+    font-size: 0.75rem;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.char-counter {
+    font-size: 0.75rem;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--text-muted);
+}
+
+.char-counter.over-limit {
+    color: var(--danger, #ff6b6b);
+    font-weight: 600;
 }
 
 /* Gallery Styles */

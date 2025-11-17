@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from "@google/genai";
 import { GoogleAuth } from "google-auth-library";
+import { HfInference } from '@huggingface/inference';
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+import fetch from "node-fetch";
 
 import express from "express";
 import cors from "cors";
@@ -36,6 +39,11 @@ const supabase = createClient(
     "https://vcrmkjjzeiwirwszqxew.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjcm1ramp6ZWl3aXJ3c3pxeGV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMjA0NzIsImV4cCI6MjA3ODc5NjQ3Mn0.7n9xIL72BRGEtqCkGZ0C-LGsxrs4MciLh1En2lv-rP4"
 );
+const hf = new HfInference(process.env.HF_TOKEN || '');
+
+const DAILY_PROMPT_LIMIT = 20;
+const DAILY_TOKEN_LIMIT = 10000;
+const MAX_SUMMARY_LENGTH = 150;
 console.log("Loaded service account:", credentials.client_email);
 console.log("Private key starts with:", credentials.private_key.slice(0, 30));
 
@@ -48,15 +56,58 @@ app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
 
+// Helper: extract text from PDF buffer using pdfjs
+async function extractPDFText(buffer) {
+    try {
+        const data = new Uint8Array(buffer);
+        const loadingTask = pdfjs.getDocument({ data });
+        const pdf = await loadingTask.promise;
+        let fullText = '';
+        
+        for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            const pageText = content.items.map(item => item.str).join(' ');
+            fullText += pageText + '\n\n';
+        }
+        
+        return fullText.trim().slice(0, 5000);
+    } catch (error) {
+        console.error('PDF extraction error:', error);
+        return '';
+    }
+}
+
+// Helper: summarize text using HF Inference API
+async function summarizeText(text) {
+    if (!text || text.length < 100) return 'No content to summarize.';
+    
+    try {
+        const result = await hf.summarization({
+            model: 'facebook/bart-large-cnn',
+            inputs: text.slice(0, 1024),
+            parameters: {
+                max_length: MAX_SUMMARY_LENGTH,
+                min_length: 30
+            }
+        });
+        return result.summary_text || 'Summary not available.';
+    } catch (error) {
+        console.error('Summarization error:', error);
+        return 'Summary generation failed.';
+    }
+}
+
 app.post("/upload-notes",upload.single("file"), async(req,res)=>{
     try{
-        const userId = req.userId || "anonymous";
+        const userId = req.body.userId || req.userId || "anonymous";
         const file = req.file;
         const subject = req.body.subject || "other";
 
         if (!file) {
-        return res.status(400).json({ error: "No file uploaded" });
+            return res.status(400).json({ error: "No file uploaded" });
         }
+        
         const filePath = `${subject}/${userId}/${Date.now()}-${file.originalname}`;
         const { data, error } = await supabase.storage
             .from("notes")
@@ -65,14 +116,44 @@ app.post("/upload-notes",upload.single("file"), async(req,res)=>{
                 cacheControl: '3600',
                 upsert: false
             });
+        
         if (error) {
             return res.status(500).json({ error: error.message });
         }
+        
+        const { data: publicUrlData } = supabase.storage
+            .from("notes")
+            .getPublicUrl(filePath);
+        const pdfUrl = publicUrlData.publicUrl;
+        
+        // Process PDF if it's a PDF file
+        if (file.mimetype === 'application/pdf') {
+            try {
+                const extractedText = await extractPDFText(file.buffer);
+                const summary = await summarizeText(extractedText);
+                
+                const { error: dbError } = await supabase
+                    .from('note_summaries')
+                    .upsert({
+                        pdf_url: pdfUrl,
+                        summary: summary,
+                        user_id: userId
+                    }, { onConflict: 'pdf_url' });
+                
+                if (dbError) {
+                    console.error('Failed to store summary:', dbError);
+                }
+            } catch (procError) {
+                console.error('PDF processing error:', procError);
+            }
+        }
+        
         res.status(200).json({ 
             message: "Uploaded", 
             path: filePath,
             fileName: file.originalname,
-            subject: subject 
+            subject: subject,
+            url: pdfUrl
         });
     }
     catch (err) {
@@ -219,31 +300,131 @@ app.delete("/delete-note", async (req, res) => {
             return res.status(500).json({ error: error.message });
         }
         
+        // Also delete summary if exists
+        const { data: urlData } = supabase.storage.from("notes").getPublicUrl(path);
+        if (urlData?.publicUrl) {
+            await supabase.from('note_summaries').delete().eq('pdf_url', urlData.publicUrl);
+        }
+        
         res.status(200).json({ message: "File deleted successfully" });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
-import fetch from "node-fetch";
+
+const MAX_PROMPT_LENGTH = 250;
+
+// Helper: check and update user AI limits
+async function checkAndUpdateLimits(userId) {
+    const { data: limitData, error } = await supabase
+        .from('user_ai_limits')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+    
+    if (error && error.code !== 'PGRST116') {
+        throw new Error('Failed to fetch user limits');
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (!limitData) {
+        await supabase.from('user_ai_limits').insert({
+            user_id: userId,
+            daily_prompt_count: 1,
+            last_reset_date: today,
+            total_tokens_used: 0
+        });
+        return { allowed: true, remaining: DAILY_PROMPT_LIMIT - 1 };
+    }
+    
+    if (limitData.last_reset_date !== today) {
+        await supabase.from('user_ai_limits').update({
+            daily_prompt_count: 1,
+            last_reset_date: today
+        }).eq('user_id', userId);
+        return { allowed: true, remaining: DAILY_PROMPT_LIMIT - 1 };
+    }
+    
+    if (limitData.daily_prompt_count >= DAILY_PROMPT_LIMIT) {
+        return { 
+            allowed: false, 
+            remaining: 0,
+            resetDate: new Date(limitData.last_reset_date + 'T00:00:00Z').getTime() + 86400000
+        };
+    }
+    
+    await supabase.from('user_ai_limits').update({
+        daily_prompt_count: limitData.daily_prompt_count + 1
+    }).eq('user_id', userId);
+    
+    return { 
+        allowed: true, 
+        remaining: DAILY_PROMPT_LIMIT - (limitData.daily_prompt_count + 1) 
+    };
+}
+
+// Helper: get user note summaries for context
+async function getUserContext(userId) {
+    const { data, error } = await supabase
+        .from('note_summaries')
+        .select('summary')
+        .eq('user_id', userId)
+        .limit(10);
+    
+    if (error || !data || data.length === 0) {
+        return '';
+    }
+    
+    const contextSummaries = data.map(row => row.summary).join(' | ');
+    return `\n\nUser's study notes context: ${contextSummaries.slice(0, 500)}`;
+}
 
 app.post("/chat", async (req, res) => {
     try {
-        const response = await fetch(
-        `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
-        {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-            contents: [
-                { role: "user", parts: [{ text: req.body.prompt }] }
-            ]
-            })
+        const prompt = (req.body.prompt || '').trim();
+        const userId = req.body.userId || 'anonymous';
+
+        if (!prompt) {
+            return res.status(400).json({ error: "Prompt is required" });
         }
+
+        if (prompt.length > MAX_PROMPT_LENGTH) {
+            return res.status(400).json({ error: `Prompt exceeds ${MAX_PROMPT_LENGTH} characters` });
+        }
+        
+        const limitCheck = await checkAndUpdateLimits(userId);
+        if (!limitCheck.allowed) {
+            return res.status(429).json({ 
+                error: "Daily prompt limit exceeded",
+                remaining: 0,
+                resetDate: limitCheck.resetDate
+            });
+        }
+        
+        const userContext = await getUserContext(userId);
+        const enrichedPrompt = prompt + userContext;
+
+        const response = await fetch(
+            `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [
+                        { role: "user", parts: [{ text: enrichedPrompt }] }
+                    ]
+                })
+            }
         );
+        
         const data = await response.json();
-        res.json(data);
+        res.json({
+            ...data,
+            remaining: limitCheck.remaining
+        });
     } catch (err) {
-        console.error("Gemini API error:", err);
+        console.error("Chat API error:", err);
         res.status(500).json({ error: err.message });
     }
 });

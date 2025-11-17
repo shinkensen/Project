@@ -4,6 +4,14 @@ const chatInput = document.getElementById('chatInput');
 const sendButton = document.getElementById('sendButton');
 const clearChatBtn = document.getElementById('clearChat');
 const attachBtn = document.getElementById('attachBtn');
+const charCounter = document.getElementById('charCounter');
+const modelInfoText = document.getElementById('modelInfoText');
+const quotaInfo = document.getElementById('quotaInfo');
+
+const MAX_MESSAGE_LENGTH = 250;
+const MODEL_INFO_DEFAULT = modelInfoText?.textContent || 'Powered by AI • Press Enter to send';
+
+let remainingQuota = null;
 
 let conversationHistory = [];
 let userNotes = [];
@@ -157,10 +165,30 @@ function formatSubjectName(subject) {
 chatInput.addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = (this.scrollHeight) + 'px';
-    
-    // Enable/disable send button
-    sendButton.disabled = this.value.trim() === '';
+    updateInputFeedback();
 });
+
+updateInputFeedback();
+
+function updateInputFeedback() {
+    const length = chatInput.value.length;
+    const isTrimmedEmpty = chatInput.value.trim() === '';
+    const overLimit = length > MAX_MESSAGE_LENGTH;
+
+    if (charCounter) {
+        charCounter.textContent = `${length} / ${MAX_MESSAGE_LENGTH}`;
+        charCounter.classList.toggle('over-limit', overLimit);
+    }
+
+    if (modelInfoText) {
+        modelInfoText.classList.toggle('warning', overLimit);
+        modelInfoText.textContent = overLimit
+            ? `Limit ${MAX_MESSAGE_LENGTH} characters`
+            : MODEL_INFO_DEFAULT;
+    }
+
+    sendButton.disabled = isTrimmedEmpty || overLimit;
+}
 
 // Send message on Enter (without Shift)
 chatInput.addEventListener('keydown', (e) => {
@@ -200,12 +228,17 @@ clearChatBtn.addEventListener('click', () => {
 function sendSuggestion(text) {
     chatInput.value = text;
     chatInput.focus();
-    sendButton.disabled = false;
+    updateInputFeedback();
 }
 
 async function sendMessage() {
     const message = chatInput.value.trim();
+    updateInputFeedback();
     if (!message) return;
+
+    if (chatInput.value.length > MAX_MESSAGE_LENGTH) {
+        return;
+    }
 
     // Remove welcome message if it exists
     const welcomeMsg = chatMessages.querySelector('.welcome-message');
@@ -220,6 +253,7 @@ async function sendMessage() {
     chatInput.value = '';
     chatInput.style.height = 'auto';
     sendButton.disabled = true;
+    updateInputFeedback();
 
     // Show typing indicator
     showTypingIndicator();
@@ -251,14 +285,61 @@ async function sendMessage() {
         const data = await response.json();
         console.log('Received response:', data);
         
+        if (data.remaining !== undefined) {
+            remainingQuota = data.remaining;
+            updateQuotaDisplay();
+        }
+
+        // Gemini returns nested candidates → extract text
+        let aiText = '';
+        if (data.response) {
+        // if backend wraps it
+        aiText = data.response;
+        } else if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        aiText = data.candidates[0].content.parts[0].text;
+        } else {
+        aiText = '[No text returned]';
+        }
+
         hideTypingIndicator();
-        addMessage(data.response, 'ai');
+        addMessage(aiText, 'ai');
         sendButton.disabled = false;
+
     } catch (error) {
         console.error('Chat error:', error);
         hideTypingIndicator();
-        addMessage(`Sorry, I encountered an error: ${error.message}. Please try again. If the problem persists, the backend server may be starting up (this can take a minute on the first request).`, 'ai');
+        
+        if (response?.status === 429) {
+            const errorData = await response.json().catch(() => ({}));
+            const resetDate = errorData.resetDate ? new Date(errorData.resetDate).toLocaleTimeString() : 'tomorrow';
+            addMessage(`⚠️ Daily prompt limit reached. Your quota resets at ${resetDate}. Please try again later.`, 'ai');
+            remainingQuota = 0;
+            updateQuotaDisplay();
+        } else {
+            addMessage(`Sorry, I encountered an error: ${error.message}. Please try again. If the problem persists, the backend server may be starting up (this can take a minute on the first request).`, 'ai');
+        }
+        
         sendButton.disabled = false;
+    }
+}
+
+function updateQuotaDisplay() {
+    if (!quotaInfo) return;
+    
+    if (remainingQuota === null) {
+        quotaInfo.textContent = '';
+        return;
+    }
+    
+    if (remainingQuota === 0) {
+        quotaInfo.textContent = '⚠️ Limit reached';
+        quotaInfo.style.color = 'var(--danger, #ff6b6b)';
+    } else if (remainingQuota <= 5) {
+        quotaInfo.textContent = `${remainingQuota} left today`;
+        quotaInfo.style.color = 'var(--warning, #f4c430)';
+    } else {
+        quotaInfo.textContent = `${remainingQuota} left`;
+        quotaInfo.style.color = 'var(--text-muted)';
     }
 }
 
