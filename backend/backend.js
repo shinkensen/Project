@@ -1,15 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from "@google/genai";
+import { GoogleAuth } from "google-auth-library";
+
 import express from "express";
 import cors from "cors";
 import multer from 'multer';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const gemini = GEMINI_API_KEY ? new GoogleGenAI({}) : null;
-if (GEMINI_API_KEY) {
-    console.log("✅ OpenAI key detected. AI responses enabled.");
-} else {
-    console.warn("⚠️ OPENAI-KEY / OPENAI_KEY not set. Chatbot will use fallback responses only.");
-}
+const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+const auth = new GoogleAuth({
+    credentials,
+    scopes: ["https://www.googleapis.com/auth/cloud-platform"]
+});
+const gemini =  new GoogleGenAI({auth});
 let url = "https://project-iqv0.onrender.com";
 const supabase = createClient(
     "https://vcrmkjjzeiwirwszqxew.supabase.co",
@@ -138,7 +139,7 @@ app.get("/notes", async (req, res) => {
                     offset: 0
                 });
             if (!folderError && folders) {
-                for (const folder of folders) {er
+                for (const folder of folders) {
                     const { data: files, error: fileError } = await supabase.storage
                         .from("notes")
                         .list(`${subject}/${folder.name}`, {
@@ -201,12 +202,19 @@ app.delete("/delete-note", async (req, res) => {
     }
 });
 app.post("/chat",async(req,res)=>{
+    try{
     const response = await gemini.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: req.prompt,
+        contents: [{role: "user", parts: [{text: req.body.prompt}]}],
     })
-    if (!response.text){
+    const output = response.text();
+    if (!output){
         res.status(500).json({error: "Error in Gemini"});
     }
-    res.status(200).json({response: response.text})
+    res.status(200).json({response: output})
+    }
+    catch(err){
+        console.error("Gemini Error" , err.message,err);
+        res.status(500).json({error: err.message});
+    }
 })

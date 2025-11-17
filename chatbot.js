@@ -235,9 +235,8 @@ async function sendMessage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                message: message,
+                prompt: message,
                 userId: userId,
-                conversationHistory: conversationHistory.slice(-10) // Last 10 messages for context
             })
         });
 
