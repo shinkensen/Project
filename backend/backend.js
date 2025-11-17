@@ -15,7 +15,10 @@ let url = "https://project-iqv0.onrender.com";
 const supabase = createClient(
     "https://vcrmkjjzeiwirwszqxew.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjcm1ramp6ZWl3aXJ3c3pxeGV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMjA0NzIsImV4cCI6MjA3ODc5NjQ3Mn0.7n9xIL72BRGEtqCkGZ0C-LGsxrs4MciLh1En2lv-rP4"
-)
+);
+console.log("Loaded service account:", credentials.client_email);
+console.log("Private key starts with:", credentials.private_key.slice(0, 30));
+
 const app = express();
 app.use(cors());
 const upload = multer({ storage: multer.memoryStorage() });
