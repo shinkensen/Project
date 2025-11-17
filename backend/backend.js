@@ -48,7 +48,11 @@ console.log("Loaded service account:", credentials.client_email);
 console.log("Private key starts with:", credentials.private_key.slice(0, 30));
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 const upload = multer({ storage: multer.memoryStorage() });
 app.use(express.json());
 const PORT = process.env.PORT || 5000;
