@@ -39,7 +39,9 @@ const supabase = createClient(
     "https://vcrmkjjzeiwirwszqxew.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjcm1ramp6ZWl3aXJ3c3pxeGV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMjA0NzIsImV4cCI6MjA3ODc5NjQ3Mn0.7n9xIL72BRGEtqCkGZ0C-LGsxrs4MciLh1En2lv-rP4"
 );
-const hf = new HfInference(process.env.HF_TOKEN || '');
+const hf = new HfInference(process.env.HF_TOKEN || '', {
+    baseUrl: 'https://router.huggingface.co/hf-inference'
+});
 
 const DAILY_PROMPT_LIMIT = 20;
 const DAILY_TOKEN_LIMIT = 10000;
