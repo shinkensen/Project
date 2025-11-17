@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from "@google/genai";
 import { GoogleAuth } from "google-auth-library";
-import { HfInference } from '@huggingface/inference';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import fetch from "node-fetch";
 
@@ -39,9 +38,6 @@ const supabase = createClient(
     "https://vcrmkjjzeiwirwszqxew.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjcm1ramp6ZWl3aXJ3c3pxeGV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMjA0NzIsImV4cCI6MjA3ODc5NjQ3Mn0.7n9xIL72BRGEtqCkGZ0C-LGsxrs4MciLh1En2lv-rP4"
 );
-const hf = new HfInference(process.env.HF_TOKEN || '', {
-    baseUrl: 'https://router.huggingface.co/hf-inference'
-});
 
 const DAILY_PROMPT_LIMIT = 20;
 const DAILY_TOKEN_LIMIT = 10000;
@@ -84,17 +80,19 @@ async function extractPDFText(buffer) {
     }
 }
 
+const HF_SUMMARY_MODEL = 'sshleifer/distilbart-cnn-12-6';
+
 // Helper: summarize text using HF Inference API
 async function summarizeText(text) {
     if (!text || text.length < 100) return 'No content to summarize.';
     
     if (!process.env.HF_TOKEN) {
-        console.log('HF_TOKEN not set, using text excerpt');
+        console.warn('HF_TOKEN not set, falling back to excerpt');
         return text.slice(0, 150) + '...';
     }
     
     try {
-        const response = await fetch('https://router.huggingface.co/hf-inference/models/facebook/bart-large-cnn', {
+        const response = await fetch(`https://router.huggingface.co/hf-inference/models/${HF_SUMMARY_MODEL}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${process.env.HF_TOKEN}`,
@@ -110,11 +108,13 @@ async function summarizeText(text) {
         });
         
         if (!response.ok) {
-            throw new Error(`HF API error: ${response.status}`);
+            const errBody = await response.text();
+            throw new Error(`HF API error: ${response.status} ${errBody}`);
         }
         
         const result = await response.json();
-        return result[0]?.summary_text || text.slice(0, 150) + '...';
+        const summaryText = result?.summary_text || result?.generated_text || result?.[0]?.summary_text || result?.[0]?.generated_text;
+        return summaryText ? summaryText : text.slice(0, 150) + '...';
     } catch (error) {
         console.error('Summarization error:', error);
         return text.slice(0, 150) + '...';
