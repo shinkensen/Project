@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import express from "express";
 import cors from "cors";
 import multer from 'multer';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const gemini = GEMINI_API_KEY ? new GoogleGenAI({}) : null;
 if (GEMINI_API_KEY) {
     console.log("✅ OpenAI key detected. AI responses enabled.");
