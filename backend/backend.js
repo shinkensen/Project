@@ -42,6 +42,10 @@ const supabase = createClient(
 const DAILY_PROMPT_LIMIT = 20;
 const DAILY_TOKEN_LIMIT = 10000;
 const MAX_SUMMARY_LENGTH = 150;
+const MAX_CONTEXT_SUMMARIES = 3;
+const MAX_CONTEXT_CHARS = 700;
+const MIN_KEYWORD_LENGTH = 4;
+const STOP_WORDS = new Set(['the','and','for','with','that','this','have','from','your','about','into','been','will','would','could','should','their','there','these','those','what','when','were','while','where','which','them']);
 console.log("Loaded service account:", credentials.client_email);
 console.log("Private key starts with:", credentials.private_key.slice(0, 30));
 
@@ -387,20 +391,66 @@ async function checkAndUpdateLimits(userId) {
     };
 }
 
+function extractKeywords(text) {
+    return [...new Set(
+        text
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/)
+            .filter(word => word.length >= MIN_KEYWORD_LENGTH && !STOP_WORDS.has(word))
+    )];
+}
+
 // Helper: get user note summaries for context
-async function getUserContext(userId) {
+async function getUserContext(userId, prompt) {
+    const keywords = extractKeywords(prompt);
     const { data, error } = await supabase
         .from('note_summaries')
-        .select('summary')
+        .select('summary,pdf_url')
         .eq('user_id', userId)
-        .limit(10);
+        .limit(20);
     
     if (error || !data || data.length === 0) {
         return '';
     }
-    
-    const contextSummaries = data.map(row => row.summary).join(' | ');
-    return `\n\nUser's study notes context: ${contextSummaries.slice(0, 500)}`;
+
+    const scored = data.map(entry => {
+        const summary = entry.summary || '';
+        const lowerSummary = summary.toLowerCase();
+        let score = 0;
+        keywords.forEach(keyword => {
+            if (lowerSummary.includes(keyword)) score += 1;
+        });
+        // Fallback weight so shorter summaries don't always dominate
+        if (score === 0) {
+            score = Math.min(1, summary.length / 200);
+        }
+        return { ...entry, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    const topEntries = scored
+        .slice(0, MAX_CONTEXT_SUMMARIES)
+        .filter(entry => entry.score > 0 || keywords.length === 0);
+
+    if (topEntries.length === 0) {
+        return '';
+    }
+
+    let remainingChars = MAX_CONTEXT_CHARS;
+    const contextBlocks = [];
+    for (const entry of topEntries) {
+        if (remainingChars <= 0) break;
+        const snippet = entry.summary.slice(0, Math.min(remainingChars, 220));
+        contextBlocks.push(`- ${snippet}${entry.pdf_url ? ` (Source: ${entry.pdf_url})` : ''}`);
+        remainingChars -= snippet.length;
+    }
+
+    if (!contextBlocks.length) {
+        return '';
+    }
+
+    return `\n\nRelevant study notes:\n${contextBlocks.join('\n')}\nUse the context above only if it directly helps answer the question.`;
 }
 
 app.post("/chat", async (req, res) => {
@@ -425,8 +475,10 @@ app.post("/chat", async (req, res) => {
             });
         }
         
-        const userContext = await getUserContext(userId);
-        const enrichedPrompt = prompt + userContext;
+        const userContext = await getUserContext(userId, prompt);
+        const enrichedPrompt = userContext
+            ? `${prompt}\n\nUse the following context if relevant:\n${userContext}`
+            : prompt;
 
         const response = await fetch(
             `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash-lite:generateContent?key=${process.env.GEMINI_API_KEY}`,
